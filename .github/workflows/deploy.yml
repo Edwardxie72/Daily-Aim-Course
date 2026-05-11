@@ -19,14 +19,18 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 18
+
+      - name: Debug Info
+        run: |
+          pwd
+          ls -R
 
       - name: Install dependencies
         run: npm install
 
       - name: Build
-        run: npm run build
+        run: npx vite build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
