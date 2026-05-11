@@ -146,13 +146,16 @@ function onMouseMove(event) {
     const movementY = event.movementY || 0;
 
     // Spike filter: Ignore abnormally large movements (often caused by browser/OS cursor wrapping)
-    if (Math.abs(movementX) > 500 || Math.abs(movementY) > 500) return;
+    if (Math.abs(movementX) > 2000 || Math.abs(movementY) > 2000) return;
 
     const yawAngle = movementX * (csgoSens * CSGO_YAW) * (Math.PI / 180);
     const pitchAngle = movementY * (csgoSens * CSGO_YAW) * (Math.PI / 180);
 
     yaw -= yawAngle;
     pitch -= pitchAngle;
+
+    // Wrap yaw to keep it within a reasonable range
+    yaw = ((yaw + Math.PI) % (Math.PI * 2)) - Math.PI;
     
     // Clamp pitch to prevent flipping
     pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));

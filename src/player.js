@@ -106,6 +106,7 @@ export function updatePlayer(delta) {
     // --- Horizontal Movement Calculation ---
     // Get exact absolute forward and right vectors from camera
     const forward = new THREE.Vector3();
+    _camera.updateMatrixWorld(); // Ensure we use the latest rotation from mouse input
     _camera.getWorldDirection(forward);
     forward.y = 0;
     forward.normalize();
@@ -150,5 +151,6 @@ export function updatePlayer(delta) {
     _camera.position.z = playerPosition.z;
     // Smooth transition: camera target is current feet position + current height offset + any air tucking
     const targetCamHeight = playerPosition.y + tuckAmount + currentHeight;
-    _camera.position.y += (targetCamHeight - _camera.position.y) * 15.0 * delta;
+    const lerpFactor = Math.min(1.0, 15.0 * delta);
+    _camera.position.y += (targetCamHeight - _camera.position.y) * lerpFactor;
 }
