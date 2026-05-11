@@ -12,6 +12,7 @@
     "three": "latest"
   },
   "devDependencies": {
-    "vite": "latest"
+    "vite": "latest",
+    "esbuild": "latest"
   }
 }
