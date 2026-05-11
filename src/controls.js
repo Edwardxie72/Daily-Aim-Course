@@ -60,6 +60,9 @@ export function setSens(val) {
 }
 
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+let pitch = 0;
+let yaw = 0;
+
 export let isListeningForKey = false;
 
 export function setIsListeningForKey(val) {
@@ -96,6 +99,12 @@ export function setupControls() {
             keybindsScreen.style.display = 'none';
             hud.style.display = 'flex';
             document.addEventListener('mousemove', onMouseMove);
+            
+            // Sync internal pitch/yaw with camera on pointer lock
+            euler.setFromQuaternion(camera.quaternion);
+            pitch = euler.x;
+            yaw = euler.y;
+
             if (!isGameRunning()) startGame();
         } else {
             // Unlock keyboard shortcuts
@@ -136,13 +145,19 @@ function onMouseMove(event) {
     const movementX = event.movementX || 0;
     const movementY = event.movementY || 0;
 
+    // Spike filter: Ignore abnormally large movements (often caused by browser/OS cursor wrapping)
+    if (Math.abs(movementX) > 500 || Math.abs(movementY) > 500) return;
+
     const yawAngle = movementX * (csgoSens * CSGO_YAW) * (Math.PI / 180);
     const pitchAngle = movementY * (csgoSens * CSGO_YAW) * (Math.PI / 180);
 
-    euler.setFromQuaternion(camera.quaternion);
-    euler.y -= yawAngle;
-    euler.x -= pitchAngle;
-    euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+    yaw -= yawAngle;
+    pitch -= pitchAngle;
+    
+    // Clamp pitch to prevent flipping
+    pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+
+    euler.set(pitch, yaw, 0);
     camera.quaternion.setFromEuler(euler);
 }
 
