@@ -80,7 +80,14 @@ export function setupControls() {
         if (e.target.id === 'edit-keybinds-btn') return;
         
         if (!document.pointerLockElement) {
-            document.body.requestPointerLock();
+            // Use unadjustedMovement: true for Raw Input (bypasses OS acceleration/snapping)
+            document.body.requestPointerLock({
+                unadjustedMovement: true,
+            }).catch(() => {
+                // Fallback for older browsers
+                document.body.requestPointerLock();
+            });
+
             // Fullscreen is required by browsers to intercept protected shortcuts like Ctrl+W
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(() => {});
@@ -99,11 +106,6 @@ export function setupControls() {
             keybindsScreen.style.display = 'none';
             hud.style.display = 'flex';
             document.addEventListener('mousemove', onMouseMove);
-            
-            // Sync internal pitch/yaw with camera on pointer lock
-            euler.setFromQuaternion(camera.quaternion);
-            pitch = euler.x;
-            yaw = euler.y;
 
             if (!isGameRunning()) startGame();
         } else {
@@ -154,8 +156,8 @@ function onMouseMove(event) {
     yaw -= yawAngle;
     pitch -= pitchAngle;
 
-    // Wrap yaw to keep it within a reasonable range
-    yaw = ((yaw + Math.PI) % (Math.PI * 2)) - Math.PI;
+    // Wrap yaw to keep it within [-PI, PI] range using robust modulo
+    yaw = ((yaw + Math.PI) % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2) - Math.PI;
     
     // Clamp pitch to prevent flipping
     pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
