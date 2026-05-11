@@ -1,0 +1,17 @@
+{
+  "name": "daily-aim-course",
+  "version": "1.0.0",
+  "description": "Daily Aim Course Engine",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "latest"
+  },
+  "devDependencies": {
+    "vite": "latest"
+  }
+}
