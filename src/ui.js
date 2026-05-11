@@ -3,6 +3,7 @@ import { setupTargets, getTotalTargets } from './targets.js';
 
 let gameRunning = false;
 let startTime = 0;
+let elapsedTime = 0; // Total accumulated time
 let totalTargets = 0;
 let targetsLeft = 0;
 let timerInterval = null;
@@ -63,8 +64,7 @@ function renderKeybinds() {
                 }
                 
                 setKeyBind(action, code);
-                btn.innerText = code;
-                btn.classList.remove('listening');
+                renderKeybinds(); // Re-render to show any 'Unset' labels for duplicates
                 setIsListeningForKey(false);
                 
                 document.removeEventListener('keydown', onKeyDown);
@@ -91,10 +91,12 @@ export function startGame() {
         totalTargets = getTotalTargets();
         targetsLeft = totalTargets;
         startTime = performance.now();
+        elapsedTime = 0;
         gameRunning = true;
     } else {
-        // Just resuming, maybe adjust start time if we want to pause timer?
-        // For now, timer keeps running in background
+        // Resuming: reset the start reference so we don't count the pause duration
+        startTime = performance.now();
+        gameRunning = true;
     }
     
     updateHUD();
@@ -117,11 +119,22 @@ function updateHUD() {
     const timerDiv = document.getElementById('timer');
     const targetCountDiv = document.getElementById('target-count');
 
-    if (gameRunning) {
-        const elapsed = (performance.now() - startTime) / 1000;
-        timerDiv.innerText = elapsed.toFixed(2) + 's';
+    if (gameRunning && document.pointerLockElement) {
+        const now = performance.now();
+        const currentSessionElapsed = (now - startTime) / 1000;
+        timerDiv.innerText = (elapsedTime + currentSessionElapsed).toFixed(2) + 's';
+    } else if (gameRunning) {
+        // If game is running but paused (no pointer lock), freeze the timer display
+        timerDiv.innerText = elapsedTime.toFixed(2) + 's';
     }
     targetCountDiv.innerText = `Targets: ${totalTargets - targetsLeft}/${totalTargets}`;
+}
+
+export function pauseGame() {
+    if (gameRunning) {
+        elapsedTime += (performance.now() - startTime) / 1000;
+        // Don't set gameRunning to false, just stop the accumulation
+    }
 }
 
 function endGame() {

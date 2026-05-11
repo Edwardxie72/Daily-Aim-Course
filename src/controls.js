@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { camera } from './engine.js';
 import { shootTarget } from './targets.js';
-import { startGame, isGameRunning } from './ui.js';
+import { startGame, isGameRunning, pauseGame } from './ui.js';
 
 export const inputState = {
     forward: false,
@@ -42,6 +42,12 @@ export function loadSettings() {
 
 export function setKeyBind(action, code) {
     if (keyBinds[action] !== undefined) {
+        // Clear any other actions already using this key
+        for (const [key, val] of Object.entries(keyBinds)) {
+            if (val === code && key !== action) {
+                keyBinds[key] = 'Unset';
+            }
+        }
         keyBinds[action] = code;
         localStorage.setItem('aimCourse_keyBinds', JSON.stringify(keyBinds));
     }
@@ -72,20 +78,34 @@ export function setupControls() {
         
         if (!document.pointerLockElement) {
             document.body.requestPointerLock();
+            // Fullscreen is required by browsers to intercept protected shortcuts like Ctrl+W
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
         }
     });
 
     document.addEventListener('pointerlockchange', () => {
         if (document.pointerLockElement === document.body) {
+            // Attempt to lock protected browser shortcuts (like Ctrl+W)
+            if (navigator.keyboard && navigator.keyboard.lock) {
+                navigator.keyboard.lock().catch(e => console.warn("Keyboard lock failed", e));
+            }
+
             startScreen.style.display = 'none';
             keybindsScreen.style.display = 'none';
             hud.style.display = 'flex';
             document.addEventListener('mousemove', onMouseMove);
             if (!isGameRunning()) startGame();
         } else {
+            // Unlock keyboard shortcuts
+            if (navigator.keyboard && navigator.keyboard.unlock) {
+                navigator.keyboard.unlock();
+            }
             if (!isGameRunning()) {
                 startScreen.style.display = 'block';
             } else {
+                pauseGame(); // Pause the timer
                 startScreen.style.display = 'block';
                 document.getElementById('start-btn').innerText = "Click anywhere to resume";
             }
@@ -128,6 +148,17 @@ function onMouseMove(event) {
 
 function onKeyDown(event) {
     if (document.pointerLockElement !== document.body) return;
+    
+    // Explicitly handle Escape to restore menu functionality when Keyboard Lock / Fullscreen is active
+    if (event.code === 'Escape') {
+        if (document.exitPointerLock) document.exitPointerLock();
+        if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen();
+        return;
+    }
+
+    // Prevent default browser shortcuts (like spacebar scrolling or find) while playing
+    event.preventDefault();
+
     for (const [action, key] of Object.entries(keyBinds)) {
         if (event.code === key) {
             inputState[action] = true;
