@@ -20,6 +20,7 @@ const playerRadius = 0.3; // Half-width of the collision hull
 const playerPosition = new THREE.Vector3(); // Tracks feet position strictly
 let isGrounded = false;
 let canJump = true;
+let crouchAmount = 0; // 0 = standing, 1 = fully crouched
 
 export function setupPlayer(scene, camera) {
     _camera = camera;
@@ -50,16 +51,24 @@ export function updatePlayer(delta) {
     direction.x = Number(inputState.right) - Number(inputState.left);
     direction.normalize();
 
-    let currentSpeed = baseSpeed;
-    if (inputState.crouch) currentSpeed = crouchSpeed;
-    else if (inputState.walk) currentSpeed = walkSpeed;
-
     const isCrouching = inputState.crouch;
-    const currentHeight = isCrouching ? crouchHeight : baseHeight;
+    const targetCrouch = isCrouching ? 1 : 0;
     
-    // Crouch jump "tuck": when crouching, we pull up our legs by 0.6 units.
-    // This happens both in air and on ground (on ground it just makes us 0.6 units 'shorter' from the bottom).
-    const tuckAmount = isCrouching ? (baseHeight - crouchHeight) : 0;
+    // Animate crouch transition (approx 0.1s)
+    const crouchLerp = Math.min(1.0, 20.0 * delta);
+    crouchAmount += (targetCrouch - crouchAmount) * crouchLerp;
+    
+    // Snap to target if very close to avoid jitter/precision issues
+    if (Math.abs(targetCrouch - crouchAmount) < 0.001) crouchAmount = targetCrouch;
+
+    const currentHeight = baseHeight - (baseHeight - crouchHeight) * crouchAmount;
+    
+    // Crouch jump "tuck": when crouching, we pull up our legs
+    const tuckAmount = (baseHeight - crouchHeight) * crouchAmount;
+
+    let currentSpeed = baseSpeed;
+    if (isCrouching) currentSpeed = crouchSpeed;
+    else if (inputState.walk) currentSpeed = walkSpeed;
 
     // --- Jumping & Gravity ---
     // Edge trigger to prevent holding space from continuous jumping
@@ -67,7 +76,11 @@ export function updatePlayer(delta) {
         canJump = true;
     }
 
-    if (isGrounded && inputState.jump && canJump && !isCrouching) {
+    // Jumping is allowed only when standing still or FULLY crouched
+    // Mid-crouch animation disables jumping (CS:GO style)
+    const isTransitioningCrouch = crouchAmount > 0 && crouchAmount < 1;
+
+    if (isGrounded && inputState.jump && canJump && !isTransitioningCrouch) {
         velocity.y = jumpForce;
         isGrounded = false;
         canJump = false;
