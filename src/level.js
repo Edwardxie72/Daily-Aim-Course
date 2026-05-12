@@ -1,15 +1,18 @@
 import { THREE } from './state.js';
 
 export const collidableBoxes = [];
+export const levelMeshes = [];
 
 export function setupLevel(scene) {
     collidableBoxes.length = 0; 
+    levelMeshes.length = 0; 
     
     function addStaticObject(mesh) {
         scene.add(mesh);
         mesh.updateMatrixWorld();
         const box = new THREE.Box3().setFromObject(mesh);
         collidableBoxes.push(box);
+        levelMeshes.push(mesh);
     }
 
     // Floor (20x70, from z=10 to z=-60)
@@ -18,7 +21,8 @@ export function setupLevel(scene) {
         new THREE.MeshStandardMaterial({ color: 0x444444 })
     );
     floor.position.set(0, -0.5, -25);
-    scene.add(floor); // Not collidable
+    scene.add(floor); 
+    levelMeshes.push(floor);
 
     const boxMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x333333 });

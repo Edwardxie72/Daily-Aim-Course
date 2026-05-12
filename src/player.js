@@ -53,8 +53,8 @@ export function updatePlayer(delta) {
     const nextX = playerPosition.x + moveDir.x * moveSpeed;
     const nextZ = playerPosition.z + moveDir.z * moveSpeed;
 
-    if (!checkCollision(new THREE.Vector3(nextX, playerPosition.y, playerPosition.z), tuckAmount)) playerPosition.x = nextX;
-    if (!checkCollision(new THREE.Vector3(playerPosition.x, playerPosition.y, nextZ), tuckAmount)) playerPosition.z = nextZ;
+    if (!checkCollision(new THREE.Vector3(nextX, playerPosition.y + 0.01, playerPosition.z), tuckAmount)) playerPosition.x = nextX;
+    if (!checkCollision(new THREE.Vector3(playerPosition.x, playerPosition.y + 0.01, nextZ), tuckAmount)) playerPosition.z = nextZ;
 
     if (inputState.jump && isGrounded) {
         velocity.y = jumpVelocity;

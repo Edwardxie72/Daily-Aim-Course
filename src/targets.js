@@ -1,5 +1,6 @@
 import { THREE, scene, camera } from './state.js';
 import { decrementTargets } from './gameLogic.js';
+import { levelMeshes } from './level.js';
 
 export let targets = [];
 const raycaster = new THREE.Raycaster();
@@ -108,10 +109,18 @@ export function setupTargets() {
 export function shootTarget() {
     raycaster.setFromCamera({ x: 0, y: 0 }, camera);
     const activeTargets = targets.filter(t => !t.userData.isFalling);
-    const intersects = raycaster.intersectObjects(activeTargets, true);
+    const intersects = raycaster.intersectObjects([...activeTargets, ...levelMeshes], true);
 
     if (intersects.length > 0) {
-        let wrapper = intersects[0].object;
+        const hit = intersects[0];
+
+        // Check if we hit a wall/floor instead of a target
+        if (levelMeshes.includes(hit.object)) {
+            createBulletHole(hit);
+            return;
+        }
+
+        let wrapper = hit.object;
         while (wrapper.parent && !targets.includes(wrapper)) {
             wrapper = wrapper.parent;
         }
@@ -149,3 +158,26 @@ export function updateTargets(delta) {
 }
 
 export function getTotalTargets() { return initialPositions.length; }
+
+function createBulletHole(hit) {
+    const hole = new THREE.Mesh(
+        new THREE.CircleGeometry(0.04, 16),
+        new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.8, side: THREE.DoubleSide })
+    );
+    
+    // Place at hit point, offset slightly along normal
+    hole.position.copy(hit.point).add(hit.normal.clone().multiplyScalar(0.01));
+    
+    // Align with surface normal
+    const dummy = new THREE.Object3D();
+    dummy.position.copy(hole.position);
+    dummy.lookAt(hole.position.clone().add(hit.normal));
+    hole.quaternion.copy(dummy.quaternion);
+    
+    scene.add(hole);
+    
+    // Fade out and remove
+    setTimeout(() => {
+        scene.remove(hole);
+    }, 4000);
+}
