@@ -1,15 +1,16 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { camera, inputState, gameStatus, keyBinds } from './state.js';
+import { camera, inputState, gameStatus, keyBinds, settings } from './state.js';
+import { updateVolume } from './sfx.js';
 import { setupWeapon, startReload } from './weapon.js';
 import { shootTarget } from './targets.js';
 import { startGame, pauseGame } from './gameLogic.js';
 
-let csgoSens = 1.0;
-const CSGO_YAW = 0.022;
-
 export function loadSettings() {
     const savedSens = localStorage.getItem('aimCourse_sens');
-    if (savedSens) csgoSens = parseFloat(savedSens);
+    if (savedSens) settings.sensitivity = parseFloat(savedSens);
+
+    const savedVol = localStorage.getItem('aimCourse_volume');
+    if (savedVol) settings.volume = parseFloat(savedVol);
 
     const savedBinds = localStorage.getItem('aimCourse_keyBinds');
     if (savedBinds) {
@@ -30,9 +31,9 @@ export function setKeyBind(action, code) {
     }
 }
 
-export function getSens() { return csgoSens; }
+export function getSens() { return settings.sensitivity; }
 export function setSens(val) { 
-    csgoSens = val; 
+    settings.sensitivity = val; 
     localStorage.setItem('aimCourse_sens', val.toString());
 }
 
@@ -50,12 +51,49 @@ export function resetRotation() {
 }
 
 export function setupControls() {
-    console.log("setupControls: initializing...");
     const startScreen = document.getElementById('start-screen');
     const hud = document.getElementById('hud');
     const keybindsScreen = document.getElementById('keybinds-screen');
     
     setupWeapon(camera);
+
+    // Settings UI Sync
+    const sensSlider = document.getElementById('sens-slider');
+    const sensInput = document.getElementById('sens-input');
+    const volSlider = document.getElementById('volume-slider');
+    const volInput = document.getElementById('volume-input');
+
+    const updateSensUI = (val) => {
+        const num = Math.max(0.01, Math.min(10, parseFloat(val)));
+        if (isNaN(num)) return;
+        settings.sensitivity = num;
+        sensSlider.value = num;
+        sensInput.value = num.toFixed(2);
+        localStorage.setItem('aimCourse_sens', num.toString());
+    };
+
+    const updateVolUI = (val, isPercent = false) => {
+        let num = parseFloat(val);
+        if (isNaN(num)) return;
+        if (isPercent) num = num / 100;
+        settings.volume = Math.max(0, Math.min(1, num));
+        volSlider.value = settings.volume;
+        volInput.value = Math.round(settings.volume * 100);
+        updateVolume();
+        localStorage.setItem('aimCourse_volume', settings.volume.toString());
+    };
+
+    // Initial sync from loaded state
+    sensSlider.value = settings.sensitivity;
+    sensInput.value = settings.sensitivity.toFixed(2);
+    volSlider.value = settings.volume;
+    volInput.value = Math.round(settings.volume * 100);
+    updateVolume();
+
+    sensSlider.addEventListener('input', (e) => updateSensUI(e.target.value));
+    sensInput.addEventListener('change', (e) => updateSensUI(e.target.value));
+    volSlider.addEventListener('input', (e) => updateVolUI(e.target.value));
+    volInput.addEventListener('change', (e) => updateVolUI(e.target.value, true));
 
     document.addEventListener('click', (e) => {
         if (isListeningForKey) return;
@@ -123,8 +161,9 @@ function onMouseMove(event) {
     const movementY = event.movementY || 0;
     if (Math.abs(movementX) > 2000 || Math.abs(movementY) > 2000) return;
 
-    yaw -= movementX * (csgoSens * CSGO_YAW) * (Math.PI / 180);
-    pitch -= movementY * (csgoSens * CSGO_YAW) * (Math.PI / 180);
+    const CSGO_YAW = 0.022;
+    yaw -= movementX * (settings.sensitivity * CSGO_YAW) * (Math.PI / 180);
+    pitch -= movementY * (settings.sensitivity * CSGO_YAW) * (Math.PI / 180);
     yaw = ((yaw + Math.PI) % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2) - Math.PI;
     pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
 }

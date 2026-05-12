@@ -34,6 +34,11 @@ export const gameStatus = {
     targetsLeft: 5
 };
 
+export const settings = {
+    sensitivity: 1.0,
+    volume: 0.8
+};
+
 export const keyBinds = {
     forward: 'KeyW',
     backward: 'KeyS',

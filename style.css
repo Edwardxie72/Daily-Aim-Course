@@ -80,23 +80,33 @@ body, html {
 .settings {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px;
     text-align: left;
     border-top: 1px solid #333;
     padding-top: 20px;
 }
 
-.settings label {
+.setting-row {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.9rem;
-    color: #ccc;
-    gap: 30px;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.settings input {
-    width: 70px;
+.setting-row label {
+    font-size: 0.85rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.settings input[type="number"] {
+    width: 60px;
     padding: 6px;
     background: #222;
     border: 1px solid #555;
@@ -104,6 +114,12 @@ body, html {
     border-radius: 4px;
     text-align: center;
     font-family: 'Inter', sans-serif;
+}
+
+.settings input[type="range"] {
+    flex: 1;
+    cursor: pointer;
+    accent-color: #4ade80;
 }
 
 .settings input:focus {

@@ -1,8 +1,14 @@
+import { settings } from './state.js';
+
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 const masterGain = audioCtx.createGain();
-masterGain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+masterGain.gain.setValueAtTime(settings.volume, audioCtx.currentTime);
 masterGain.connect(audioCtx.destination);
+
+export function updateVolume() {
+    masterGain.gain.setTargetAtTime(settings.volume, audioCtx.currentTime, 0.05);
+}
 
 function createNoiseBuffer() {
     const bufferSize = audioCtx.sampleRate * 1.0;

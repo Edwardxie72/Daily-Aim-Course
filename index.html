@@ -18,10 +18,21 @@
             <h1>Daily Aim Course</h1>
             <p id="start-btn">Click anywhere to start</p>
             <div class="settings">
-                <label>
-                    CS:GO Sensitivity:
-                    <input type="number" id="sens-input" value="1.0" step="0.1">
-                </label>
+                <div class="setting-row">
+                    <label>Sensitivity</label>
+                    <div class="control-group">
+                        <input type="range" id="sens-slider" min="0.1" max="10" step="0.01" value="1.0">
+                        <input type="number" id="sens-input" value="1.0" step="0.01">
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <label>Volume</label>
+                    <div class="control-group">
+                        <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.8">
+                        <input type="number" id="volume-input" value="80" step="1">
+                        <span style="font-size: 0.8rem; color: #888;">%</span>
+                    </div>
+                </div>
             </div>
             <button id="edit-keybinds-btn" class="menu-btn" style="margin-top: 20px;">Edit Keybinds</button>
             <p id="completion-msg" style="display: none; margin-top: 20px; color: #4ade80; font-weight: bold;"></p>
