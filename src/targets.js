@@ -1,7 +1,7 @@
 import { THREE, scene, camera } from './state.js';
 import { decrementTargets } from './gameLogic.js';
 import { levelMeshes } from './level.js';
-import { playHeadshot, playBodyHit, playWallHit, resumeAudio } from './sfx.js';
+import { playHeadshot, playBodyHit, playWallHit, playTargetFall, resumeAudio } from './sfx.js';
 
 export let targets = [];
 const raycaster = new THREE.Raycaster();
@@ -149,6 +149,7 @@ export function shootTarget(spread = 0) {
         if (wrapper.userData.hp <= 0) {
             wrapper.userData.isFalling = true;
             wrapper.userData.hpBar.scale.y = 0.0001; // Effectively empty
+            playTargetFall();
             decrementTargets();
             setTimeout(() => {
                 scene.remove(wrapper);

@@ -1,6 +1,7 @@
 import { setSens, getSens, setKeyBind, setIsListeningForKey, loadSettings } from './controls.js';
 import { getAmmoInfo } from './weapon.js';
 import { gameStatus, keyBinds } from './state.js';
+import { fetchLeaderboard, submitTime, updateLeaderboardUI } from './leaderboard.js';
 
 export function setupUI() {
     loadSettings();
@@ -27,6 +28,31 @@ export function setupUI() {
         keybindsScreen.style.display = 'none';
         startScreen.style.display = 'block';
     });
+
+    const submitBtn = document.getElementById('submit-btn');
+    const nameInput = document.getElementById('name-input');
+    const submitPanel = document.getElementById('submit-panel');
+
+    submitBtn.addEventListener('click', async () => {
+        const name = nameInput.value.trim().toUpperCase() || 'AAA';
+        const time = parseFloat(submitBtn.dataset.time);
+        
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Submitting...";
+        
+        const success = await submitTime(name, time);
+        if (success) {
+            submitPanel.style.display = 'none';
+            const data = await fetchLeaderboard();
+            updateLeaderboardUI(data);
+        }
+        
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Submit";
+    });
+
+    // Initial fetch
+    fetchLeaderboard().then(updateLeaderboardUI);
 }
 
 function renderKeybinds() {

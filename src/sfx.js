@@ -209,6 +209,40 @@ export function playWallHit() {
     noise.stop(audioCtx.currentTime + 0.04);
 }
 
+export function playTargetFall() {
+    const noise = audioCtx.createBufferSource();
+    const filter = audioCtx.createBiquadFilter();
+    const gain = audioCtx.createGain();
+    noise.buffer = noiseBuffer;
+    
+    // Low thud
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(200, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+    
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    noise.start();
+    noise.stop(audioCtx.currentTime + 0.3);
+
+    // Metallic/Wood clatter
+    const clatter = audioCtx.createBufferSource();
+    const clatterFilter = audioCtx.createBiquadFilter();
+    const clatterGain = audioCtx.createGain();
+    clatter.buffer = noiseBuffer;
+    clatterFilter.type = 'bandpass';
+    clatterFilter.frequency.setValueAtTime(1000, audioCtx.currentTime);
+    clatterGain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    clatterGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+    clatter.connect(clatterFilter);
+    clatterFilter.connect(clatterGain);
+    clatterGain.connect(masterGain);
+    clatter.start();
+    clatter.stop(audioCtx.currentTime + 0.15);
+}
+
 export function resumeAudio() {
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();

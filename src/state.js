@@ -48,7 +48,8 @@ export const keyBinds = {
     crouch: 'ControlLeft',
     walk: 'ShiftLeft',
     shoot: 'Mouse0',
-    reload: 'KeyR'
+    reload: 'KeyR',
+    reset: 'KeyY'
 };
 
 

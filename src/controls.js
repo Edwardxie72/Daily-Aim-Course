@@ -111,9 +111,11 @@ export function setupControls() {
     });
 
     document.addEventListener('pointerlockchange', () => {
+        const leaderboardPanel = document.getElementById('leaderboard-panel');
         if (document.pointerLockElement === document.body) {
             startScreen.style.display = 'none';
             keybindsScreen.style.display = 'none';
+            if (leaderboardPanel) leaderboardPanel.style.display = 'none';
             hud.style.display = 'flex';
             document.addEventListener('mousemove', onMouseMove);
 
@@ -123,6 +125,7 @@ export function setupControls() {
         } else {
             if (gameStatus.running) pauseGame();
             startScreen.style.display = 'block';
+            if (leaderboardPanel) leaderboardPanel.style.display = 'block';
             document.getElementById('start-btn').innerText = "Click anywhere to resume";
             document.removeEventListener('mousemove', onMouseMove);
             for (const key in inputState) inputState[key] = false;
@@ -171,7 +174,7 @@ function onMouseMove(event) {
 function onKeyDown(event) {
     if (document.pointerLockElement !== document.body) return;
     
-    if (event.code === 'F1') {
+    if (event.code === keyBinds.reset) {
         event.preventDefault();
         startGame();
         return;

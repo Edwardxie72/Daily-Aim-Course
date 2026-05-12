@@ -14,9 +14,21 @@
     <div id="crosshair"></div>
     
     <div id="ui-overlay">
+        <div id="leaderboard-panel">
+            <h3>Top 10 Leaders</h3>
+            <div id="leaderboard-list">Loading...</div>
+        </div>
+
         <div id="start-screen">
             <h1>Daily Aim Course</h1>
             <p id="start-btn">Click anywhere to start</p>
+            
+            <div id="submit-panel" style="display: none; background: rgba(74, 222, 128, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #4ade80; margin-bottom: 20px;">
+                <p style="margin: 0 0 10px 0; color: #4ade80;">New Record!</p>
+                <input type="text" id="name-input" maxlength="3" placeholder="AAA" style="width: 80px; font-size: 1.5rem; text-transform: uppercase;">
+                <button id="submit-btn" class="menu-btn" style="margin-left: 10px;">Submit</button>
+            </div>
+
             <div class="settings">
                 <div class="setting-row">
                     <label>Sensitivity</label>

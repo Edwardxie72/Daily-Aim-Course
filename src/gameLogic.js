@@ -1,6 +1,7 @@
 import { setupTargets, getTotalTargets } from './targets.js';
 import { gameStatus } from './state.js';
 import { resetAmmo } from './weapon.js';
+import { fetchLeaderboard, updateLeaderboardUI } from './leaderboard.js';
 
 export function startGame() {
     console.log("gameLogic: startGame called");
@@ -20,8 +21,16 @@ export function startGame() {
     // Restore UI state
     const startBtn = document.getElementById('start-btn');
     const completionMsg = document.getElementById('completion-msg');
+    const submitPanel = document.getElementById('submit-panel');
+    const leaderboardPanel = document.getElementById('leaderboard-panel');
+    
     if (startBtn) startBtn.style.display = 'block';
     if (completionMsg) completionMsg.style.display = 'none';
+    if (submitPanel) submitPanel.style.display = 'none';
+    if (leaderboardPanel) {
+        // Just refresh the data, don't force it to show here
+        fetchLeaderboard().then(updateLeaderboardUI);
+    }
 }
 
 export function decrementTargets() {
@@ -55,6 +64,17 @@ export function decrementTargets() {
                 </div>
             `;
             completionMsg.style.display = 'block';
+
+            // Show leaderboard submission if they finished
+            const submitPanel = document.getElementById('submit-panel');
+            if (submitPanel) {
+                submitPanel.style.display = 'block';
+                document.getElementById('name-input').value = '';
+                document.getElementById('name-input').focus();
+                
+                // Store the final time on the submit button for the click handler
+                document.getElementById('submit-btn').dataset.time = finalTime;
+            }
 
             document.getElementById('copy-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
