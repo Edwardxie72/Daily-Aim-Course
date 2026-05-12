@@ -13,6 +13,14 @@ const faceTextures = [
 ];
 const easterEggTexture = textureLoader.load('./easter_egg.png');
 
+// Reuse Geometries and Materials for performance
+const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+const bodyGeometry = new THREE.BoxGeometry(0.8, 1.17, 0.05);
+const headGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.05);
+const hpBgGeometry = new THREE.PlaneGeometry(0.1, 1.17);
+const hpBgMaterial = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
+const hpFgMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
+
 const initialPositions = [
     // Room 1 (6 targets) - Face forward (z axis)
     { x: -5, y: 0, z: -7 },
@@ -53,11 +61,9 @@ export function setupTargets() {
         // Apply orientation based on room layout
         wrapper.rotation.order = 'YXZ'; // Important: apply Yaw before Pitch so it falls backward correctly
         wrapper.rotation.y = pos.rotY || 0; 
-        
-        const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
 
         // Body
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.17, 0.05), woodMat);
+        const body = new THREE.Mesh(bodyGeometry, woodMat);
         body.position.y = 0.585;
         wrapper.add(body);
 
@@ -83,22 +89,23 @@ export function setupTargets() {
             woodMat  // back
         ];
         
-        const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.05), headMaterials);
+        const head = new THREE.Mesh(headGeometry, headMaterials);
         head.position.y = 1.37;
         head.userData.isHead = true;
         wrapper.add(head);
 
         // HP Bar (Double sided for visibility)
-        const hpBg = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 1.17), new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide }));
+        const hpBg = new THREE.Mesh(hpBgGeometry, hpBgMaterial);
         hpBg.position.set(0.6, 0.585, 0.03);
         wrapper.add(hpBg);
 
-        const hpFg = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 1.17), new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide }));
+        const hpFg = new THREE.Mesh(hpBgGeometry, hpFgMaterial);
         hpFg.position.set(0.6, 0.585, 0.04);
         wrapper.add(hpFg);
 
         wrapper.userData.hp = 100;
         wrapper.userData.hpBar = hpFg;
+        wrapper.userData.hpBarBg = hpBg;
         wrapper.userData.isFalling = false;
         wrapper.userData.fallAngle = 0;
         

@@ -26,6 +26,10 @@ export function initEngine() {
     setupUI();
     setupHUDLoop();
     
+    // Pre-warm renderer (compiles shaders and uploads level textures to GPU)
+    renderer.compile(scene, camera);
+    renderer.render(scene, camera);
+    
     renderer.setAnimationLoop(animate);
 }
 
