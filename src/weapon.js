@@ -1,6 +1,7 @@
-import { THREE } from './state.js';
+import { THREE, inputState } from './state.js';
 import { shootTarget } from './targets.js';
 import { applyRecoil } from './controls.js';
+import { playShot, playClick, playReload, resumeAudio } from './sfx.js';
 
 let weaponGroup;
 let magMesh; // Store reference for animation
@@ -41,6 +42,8 @@ export function setupWeapon(camera) {
     camera.add(weaponGroup);
 }
 
+let hasPlayedEmptyClick = false;
+
 export function updateWeapon(delta, isFiring) {
     if (isReloading) {
         reloadTimer -= delta;
@@ -50,15 +53,24 @@ export function updateWeapon(delta, isFiring) {
         }
     }
 
-    if (isFiring && !isReloading && currentMag > 0) {
-        fireTimer -= delta;
-        if (fireTimer <= 0) {
-            fire();
-            fireTimer = FIRE_RATE;
+    if (isFiring && !isReloading) {
+        if (currentMag > 0) {
+            fireTimer -= delta;
+            if (fireTimer <= 0) {
+                resumeAudio();
+                fire();
+                fireTimer = FIRE_RATE;
+            }
+        } else if (!hasPlayedEmptyClick) {
+            // Play click exactly once per trigger pull when empty
+            resumeAudio();
+            playClick();
+            hasPlayedEmptyClick = true;
         }
     } else {
         if (!isFiring) {
             shotsFired = 0;
+            hasPlayedEmptyClick = false;
         }
         fireTimer = Math.max(0, fireTimer - delta);
     }
@@ -96,6 +108,7 @@ function animateReload(delta) {
 }
 
 function fire() {
+    playShot();
     currentMag--;
     shotsFired++;
     
@@ -136,6 +149,7 @@ export function startReload() {
     if (isReloading || currentMag === 30 || reserveAmmo <= 0) return;
     isReloading = true;
     reloadTimer = RELOAD_TIME;
+    playReload();
 }
 
 function completeReload() {

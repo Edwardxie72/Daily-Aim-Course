@@ -1,6 +1,7 @@
 import { THREE, scene, camera } from './state.js';
 import { decrementTargets } from './gameLogic.js';
 import { levelMeshes } from './level.js';
+import { playHeadshot, playBodyHit, playWallHit, resumeAudio } from './sfx.js';
 
 export let targets = [];
 const raycaster = new THREE.Raycaster();
@@ -127,7 +128,13 @@ export function shootTarget() {
 
         if (!wrapper || wrapper.userData.isFalling) return;
 
-        const damage = intersects[0].object.userData.isHead ? 100 : 34;
+        resumeAudio();
+        const isHead = hit.object.userData.isHead;
+        const damage = isHead ? 100 : 34;
+        
+        if (isHead) playHeadshot();
+        else playBodyHit();
+
         wrapper.userData.hp -= damage;
 
         if (wrapper.userData.hp <= 0) {
@@ -160,6 +167,7 @@ export function updateTargets(delta) {
 export function getTotalTargets() { return initialPositions.length; }
 
 function createBulletHole(hit) {
+    playWallHit();
     const hole = new THREE.Mesh(
         new THREE.CircleGeometry(0.04, 16),
         new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.8, side: THREE.DoubleSide })
