@@ -137,12 +137,17 @@ function fire() {
         kickY = 0;
     }
     
-    applyRecoil(kickX * 0.012, kickY * 0.012);
+    applyRecoil(kickX * 0.015, kickY * 0.015);
 
     weaponGroup.position.z += 0.06;
     setTimeout(() => { if (weaponGroup) weaponGroup.position.z -= 0.06; }, 50);
 
-    shootTarget();
+    let spread = 0;
+    if (shotsFired > 3) {
+        // Increased bloom intensity and cap
+        spread = Math.min(0.15, (shotsFired - 3) * 0.008);
+    }
+    shootTarget(spread);
 }
 
 export function startReload() {

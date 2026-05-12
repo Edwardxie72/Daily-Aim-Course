@@ -107,8 +107,10 @@ export function setupTargets() {
     });
 }
 
-export function shootTarget() {
-    raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+export function shootTarget(spread = 0) {
+    const randomX = (Math.random() - 0.5) * spread;
+    const randomY = (Math.random() - 0.5) * spread;
+    raycaster.setFromCamera({ x: randomX, y: randomY }, camera);
     const activeTargets = targets.filter(t => !t.userData.isFalling);
     const intersects = raycaster.intersectObjects([...activeTargets, ...levelMeshes], true);
 
