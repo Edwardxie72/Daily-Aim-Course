@@ -3,25 +3,54 @@ import { decrementTargets } from './gameLogic.js';
 
 export let targets = [];
 const raycaster = new THREE.Raycaster();
+const textureLoader = new THREE.TextureLoader();
+const faceTextures = [
+    textureLoader.load('./face.png'),
+    textureLoader.load('./face2.png'),
+    textureLoader.load('./face3.png')
+];
+const easterEggTexture = textureLoader.load('./easter_egg.png');
+
+const initialPositions = [
+    // Room 1 (6 targets) - Face forward (z axis)
+    { x: -5, y: 0, z: -7 },
+    { x: 5, y: 0, z: -10 },
+    { x: -1, y: 1.5, z: -10 },
+    { x: 1, y: 1.5, z: -10 },
+    { x: -6, y: 3.5, z: -14 },
+    { x: 7, y: 0, z: -15 },
+
+    // Room 2 (7 targets) - Face Left (towards door at x=-8)
+    { x: 0, y: 0.5, z: -25, rotY: -Math.PI / 2 },
+    { x: 2, y: 0.5, z: -25, rotY: -Math.PI / 2 },
+    { x: 7, y: 5.5, z: -30, rotY: -Math.PI / 2 },
+    { x: 0, y: 0, z: -32, rotY: -Math.PI / 2 },
+    { x: -2, y: 2.5, z: -35, rotY: -Math.PI / 2 },
+    { x: 2, y: 0, z: -35, rotY: -Math.PI / 2 },
+    { x: 5, y: 0, z: -37, rotY: -Math.PI / 2 },
+
+    // Room 3 (8 targets) - Face Right (towards door at x=8)
+    { x: 2, y: 0, z: -42, rotY: Math.PI / 2 },
+    { x: -4, y: 1.5, z: -45, rotY: Math.PI / 2 },
+    { x: -2, y: 1.5, z: -45, rotY: Math.PI / 2 },
+    { x: 0, y: 1.5, z: -45, rotY: Math.PI / 2 },
+    { x: 2, y: 1.5, z: -45, rotY: Math.PI / 2 },
+    { x: -7, y: 7.5, z: -50, rotY: Math.PI / 2 },
+    { x: 0, y: 0, z: -50, rotY: Math.PI / 2 },
+    { x: -5, y: 0, z: -55, rotY: Math.PI / 2 }
+];
 
 export function setupTargets() {
     targets.forEach(t => scene.remove(t));
     targets = [];
 
-    const positions = [
-        { x: -5, y: 0, z: -15 },
-        { x: 5, y: 0, z: -15 },
-        { x: 0, y: 0, z: -25 },
-        { x: -8, y: 1.4, z: -20 }, 
-        { x: 8, y: 0, z: -18 }
-    ];
-
-    positions.forEach(pos => {
+    initialPositions.forEach(pos => {
         const wrapper = new THREE.Group();
         wrapper.position.set(pos.x, pos.y, pos.z);
         
-        // Face the player (default orientation)
-        wrapper.rotation.y = 0; 
+        // Apply orientation based on room layout
+        wrapper.rotation.order = 'YXZ'; // Important: apply Yaw before Pitch so it falls backward correctly
+        wrapper.rotation.y = pos.rotY || 0; 
         
         const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
 
@@ -31,7 +60,28 @@ export function setupTargets() {
         wrapper.add(body);
 
         // Head
-        const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.05), woodMat);
+        let selectedFace;
+        if (Math.random() < 0.01) {
+            selectedFace = easterEggTexture;
+        } else {
+            selectedFace = faceTextures[Math.floor(Math.random() * faceTextures.length)];
+        }
+
+        const faceMat = new THREE.MeshStandardMaterial({ 
+            map: selectedFace, 
+            color: 0xffffff
+        });
+        
+        const headMaterials = [
+            woodMat, // right
+            woodMat, // left
+            woodMat, // top
+            woodMat, // bottom
+            faceMat, // front (+z)
+            woodMat  // back
+        ];
+        
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.05), headMaterials);
         head.position.y = 1.37;
         head.userData.isHead = true;
         wrapper.add(head);
@@ -98,4 +148,4 @@ export function updateTargets(delta) {
     });
 }
 
-export function getTotalTargets() { return 5; }
+export function getTotalTargets() { return initialPositions.length; }

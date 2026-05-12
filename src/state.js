@@ -7,6 +7,7 @@ scene.background = new THREE.Color(0x222233);
 
 export const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 1.37, 0);
+scene.add(camera);
 
 export const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);

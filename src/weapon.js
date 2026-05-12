@@ -3,11 +3,12 @@ import { shootTarget } from './targets.js';
 import { applyRecoil } from './controls.js';
 
 let weaponGroup;
+let magMesh; // Store reference for animation
 let currentMag = 30;
 let reserveAmmo = 90;
 let isReloading = false;
 let reloadTimer = 0;
-const RELOAD_TIME = 2.5;
+const RELOAD_TIME = 2.0; // Shortened slightly for better feel
 
 let fireTimer = 0;
 const FIRE_RATE = 0.1; 
@@ -17,8 +18,8 @@ export function setupWeapon(camera) {
     if (weaponGroup) camera.remove(weaponGroup);
     weaponGroup = new THREE.Group();
     
-    const woodMat = new THREE.MeshBasicMaterial({ color: 0x5d4037 });
-    const metalMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
 
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.15, 0.5), metalMat);
     weaponGroup.add(body);
@@ -31,10 +32,10 @@ export function setupWeapon(camera) {
     stock.position.set(0, -0.02, -0.4);
     weaponGroup.add(stock);
 
-    const mag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.3, 0.15), metalMat);
-    mag.position.set(0, -0.2, 0.1);
-    mag.rotation.x = Math.PI / 10;
-    weaponGroup.add(mag);
+    magMesh = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.3, 0.15), metalMat);
+    magMesh.position.set(0, -0.2, 0.1);
+    magMesh.rotation.x = Math.PI / 10;
+    weaponGroup.add(magMesh);
 
     weaponGroup.position.set(0.3, -0.4, -0.6);
     camera.add(weaponGroup);
@@ -43,6 +44,7 @@ export function setupWeapon(camera) {
 export function updateWeapon(delta, isFiring) {
     if (isReloading) {
         reloadTimer -= delta;
+        animateReload(delta);
         if (reloadTimer <= 0) {
             completeReload();
         }
@@ -59,6 +61,37 @@ export function updateWeapon(delta, isFiring) {
             shotsFired = 0;
         }
         fireTimer = Math.max(0, fireTimer - delta);
+    }
+}
+
+function animateReload(delta) {
+    const progress = 1 - (reloadTimer / RELOAD_TIME); // 0 to 1
+    
+    if (progress < 0.4) {
+        // Phase 1: Mag drops out (0% to 40% of time)
+        const p = progress / 0.4;
+        magMesh.position.y = -0.2 - (p * 0.5);
+        magMesh.position.z = 0.1 - (p * 0.2);
+        magMesh.rotation.x = (Math.PI / 10) + (p * 0.5);
+    } else if (progress < 0.6) {
+        // Phase 2: Mag hidden (40% to 60% of time)
+        magMesh.visible = false;
+    } else {
+        // Phase 3: New mag enters (60% to 100% of time)
+        magMesh.visible = true;
+        const p = (progress - 0.6) / 0.4; // 0 to 1
+        magMesh.position.y = -0.7 + (p * 0.5);
+        magMesh.position.z = -0.1 + (p * 0.2);
+        magMesh.rotation.x = (Math.PI / 10 + 0.5) - (p * 0.5);
+    }
+
+    // Add a slight weapon tilt during reload
+    if (progress < 0.2) {
+        weaponGroup.rotation.x += delta * 2;
+    } else if (progress > 0.8) {
+        weaponGroup.rotation.x -= delta * 2;
+    } else {
+        weaponGroup.rotation.x = 0;
     }
 }
 
@@ -91,10 +124,8 @@ function fire() {
         kickY = 0;
     }
     
-    // Permanently apply recoil to aim
     applyRecoil(kickX * 0.012, kickY * 0.012);
 
-    // Visual weapon kick (snappy back and forth)
     weaponGroup.position.z += 0.06;
     setTimeout(() => { if (weaponGroup) weaponGroup.position.z -= 0.06; }, 50);
 
@@ -113,6 +144,12 @@ function completeReload() {
     const take = Math.min(needed, reserveAmmo);
     currentMag += take;
     reserveAmmo -= take;
+    
+    // Reset mag position
+    magMesh.position.set(0, -0.2, 0.1);
+    magMesh.rotation.x = Math.PI / 10;
+    magMesh.visible = true;
+    weaponGroup.rotation.x = 0;
 }
 
 export function getAmmoInfo() {

@@ -4,7 +4,7 @@ import { setupLevel } from './level.js';
 import { setupPlayer, updatePlayer } from './player.js';
 import { updateTargets } from './targets.js';
 import { setupControls, updateCameraRotation } from './controls.js';
-import { updateWeapon } from './weapon.js';
+import { setupWeapon, updateWeapon } from './weapon.js';
 import { setupUI, setupHUDLoop } from './ui.js';
 
 window.addEventListener('resize', onWindowResize);
