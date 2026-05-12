@@ -170,6 +170,13 @@ function onMouseMove(event) {
 
 function onKeyDown(event) {
     if (document.pointerLockElement !== document.body) return;
+    
+    if (event.code === 'F1') {
+        event.preventDefault();
+        startGame();
+        return;
+    }
+
     if (event.code === 'Escape') {
         if (document.exitPointerLock) document.exitPointerLock();
         return;

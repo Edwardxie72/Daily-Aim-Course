@@ -99,7 +99,7 @@ export function setupTargets() {
         hpBg.position.set(0.6, 0.585, 0.03);
         wrapper.add(hpBg);
 
-        const hpFg = new THREE.Mesh(hpBgGeometry, hpFgMaterial);
+        const hpFg = new THREE.Mesh(hpBgGeometry, hpFgMaterial.clone());
         hpFg.position.set(0.6, 0.585, 0.04);
         wrapper.add(hpFg);
 
@@ -158,7 +158,7 @@ export function shootTarget(spread = 0) {
             const ratio = wrapper.userData.hp / 100;
             wrapper.userData.hpBar.scale.y = ratio;
             wrapper.userData.hpBar.position.y = 0.585 - (1.17 * (1 - ratio)) / 2;
-            wrapper.userData.hpBar.material.color.setRGB(1 - ratio, ratio, 0);
+            wrapper.userData.hpBar.material.color.set(0xffa500); // Set to orange when damaged
         }
     }
 }
