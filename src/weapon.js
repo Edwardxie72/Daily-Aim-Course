@@ -152,6 +152,19 @@ function completeReload() {
     weaponGroup.rotation.x = 0;
 }
 
+export function resetAmmo() {
+    currentMag = 30;
+    reserveAmmo = 90;
+    isReloading = false;
+    reloadTimer = 0;
+    if (magMesh) {
+        magMesh.position.set(0, -0.2, 0.1);
+        magMesh.rotation.x = Math.PI / 10;
+        magMesh.visible = true;
+    }
+    if (weaponGroup) weaponGroup.rotation.x = 0;
+}
+
 export function getAmmoInfo() {
     return {
         current: currentMag,

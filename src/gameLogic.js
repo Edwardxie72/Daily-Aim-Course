@@ -1,5 +1,6 @@
 import { setupTargets, getTotalTargets } from './targets.js';
 import { gameStatus } from './state.js';
+import { resetAmmo } from './weapon.js';
 
 export function startGame() {
     console.log("gameLogic: startGame called");
@@ -10,6 +11,7 @@ export function startGame() {
     gameStatus.startTime = performance.now();
     gameStatus.elapsedTime = 0;
     gameStatus.running = true;
+    resetAmmo();
 
     // Reset player position and rotation on start/restart
     import('./player.js').then(m => m.setupPlayer());
