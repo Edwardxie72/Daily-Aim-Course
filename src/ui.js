@@ -1,12 +1,6 @@
-import { setSens, getSens, keyBinds, setKeyBind, setIsListeningForKey, loadSettings } from './controls.js';
-import { setupTargets, getTotalTargets } from './targets.js';
-
-let gameRunning = false;
-let startTime = 0;
-let elapsedTime = 0; // Total accumulated time
-let totalTargets = 0;
-let targetsLeft = 0;
-let timerInterval = null;
+import { setSens, getSens, setKeyBind, setIsListeningForKey, loadSettings } from './controls.js';
+import { getAmmoInfo } from './weapon.js';
+import { gameStatus, keyBinds } from './state.js';
 
 export function setupUI() {
     loadSettings();
@@ -64,7 +58,7 @@ function renderKeybinds() {
                 }
                 
                 setKeyBind(action, code);
-                renderKeybinds(); // Re-render to show any 'Unset' labels for duplicates
+                renderKeybinds(); 
                 setIsListeningForKey(false);
                 
                 document.removeEventListener('keydown', onKeyDown);
@@ -81,65 +75,31 @@ function renderKeybinds() {
     }
 }
 
-export function isGameRunning() {
-    return gameRunning;
-}
-
-export function startGame() {
-    if (!gameRunning) {
-        setupTargets();
-        totalTargets = getTotalTargets();
-        targetsLeft = totalTargets;
-        startTime = performance.now();
-        elapsedTime = 0;
-        gameRunning = true;
-    } else {
-        // Resuming: reset the start reference so we don't count the pause duration
-        startTime = performance.now();
-        gameRunning = true;
-    }
-    
-    updateHUD();
-
+let timerInterval = null;
+export function setupHUDLoop() {
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         updateHUD();
     }, 10);
 }
 
-export function targetHit() {
-    targetsLeft--;
-    updateHUD();
-    if (targetsLeft <= 0) {
-        endGame();
-    }
-}
-
 function updateHUD() {
     const timerDiv = document.getElementById('timer');
     const targetCountDiv = document.getElementById('target-count');
+    const ammoDiv = document.getElementById('ammo-display');
 
-    if (gameRunning && document.pointerLockElement) {
+    if (gameStatus.running) {
         const now = performance.now();
-        const currentSessionElapsed = (now - startTime) / 1000;
-        timerDiv.innerText = (elapsedTime + currentSessionElapsed).toFixed(2) + 's';
-    } else if (gameRunning) {
-        // If game is running but paused (no pointer lock), freeze the timer display
-        timerDiv.innerText = elapsedTime.toFixed(2) + 's';
+        const totalElapsed = (now - gameStatus.startTime) / 1000;
+        timerDiv.innerText = totalElapsed.toFixed(2) + 's';
     }
-    targetCountDiv.innerText = `Targets: ${totalTargets - targetsLeft}/${totalTargets}`;
-}
 
-export function pauseGame() {
-    if (gameRunning) {
-        elapsedTime += (performance.now() - startTime) / 1000;
-        // Don't set gameRunning to false, just stop the accumulation
+    targetCountDiv.innerText = `Targets: ${gameStatus.totalTargets - gameStatus.targetsLeft}/${gameStatus.totalTargets}`;
+
+    const ammo = getAmmoInfo();
+    if (ammo.isReloading) {
+        ammoDiv.innerText = "RELOADING...";
+    } else {
+        ammoDiv.innerText = `${ammo.current} / ${ammo.reserve}`;
     }
-}
-
-function endGame() {
-    gameRunning = false;
-    clearInterval(timerInterval);
-    document.exitPointerLock();
-    document.getElementById('start-btn').innerText = "Course Cleared! Click to Play Again";
 }

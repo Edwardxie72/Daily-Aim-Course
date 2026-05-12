@@ -1,91 +1,38 @@
-import * as THREE from 'three';
+import { THREE } from './state.js';
 
 export const collidableBoxes = [];
 
 export function setupLevel(scene) {
-    collidableBoxes.length = 0; // Reset for re-setup
+    collidableBoxes.length = 0; 
     
     function addStaticObject(mesh) {
         scene.add(mesh);
-        // Force world matrix update so Box3 calculates correctly
-        mesh.updateMatrixWorld(true);
-        const box3 = new THREE.Box3().setFromObject(mesh);
-        collidableBoxes.push(box3);
+        mesh.updateMatrixWorld();
+        const box = new THREE.Box3().setFromObject(mesh);
+        collidableBoxes.push(box);
     }
 
-    // Floor (Using a BoxGeometry instead of Plane for Y-axis thickness)
-    const floorGeometry = new THREE.BoxGeometry(40, 1, 40);
-    const floorMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x333333,
-        roughness: 0.8
-    });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.position.y = -0.5; // Top surface exactly at Y=0
-    floor.receiveShadow = true;
-    addStaticObject(floor);
+    // Floor
+    const floor = new THREE.Mesh(
+        new THREE.BoxGeometry(40, 1, 40),
+        new THREE.MeshStandardMaterial({ color: 0x444444 })
+    );
+    floor.position.y = -0.5;
+    scene.add(floor); // Not collidable
 
-    // Walls
-    const wallMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x555555,
-        roughness: 0.9
-    });
-    const wallGeometry = new THREE.BoxGeometry(40, 4, 1);
+    // Simple platforming sequence
+    const boxMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
     
-    // North wall
-    const wallN = new THREE.Mesh(wallGeometry, wallMaterial);
-    wallN.position.set(0, 2, -20);
-    wallN.receiveShadow = true;
-    addStaticObject(wallN);
+    const boxes = [
+        { size: [4, 1, 4], pos: [0, 0.5, -5] },
+        { size: [4, 2, 4], pos: [-5, 1, -10] },
+        { size: [4, 3, 4], pos: [0, 1.5, -15] },
+        { size: [10, 1, 10], pos: [0, 0.5, -25] }
+    ];
 
-    // South wall
-    const wallS = new THREE.Mesh(wallGeometry, wallMaterial);
-    wallS.position.set(0, 2, 20);
-    wallS.receiveShadow = true;
-    addStaticObject(wallS);
-
-    // East wall
-    const wallE = new THREE.Mesh(wallGeometry, wallMaterial);
-    wallE.position.set(20, 2, 0);
-    wallE.rotation.y = Math.PI / 2;
-    wallE.receiveShadow = true;
-    addStaticObject(wallE);
-
-    // West wall
-    const wallW = new THREE.Mesh(wallGeometry, wallMaterial);
-    wallW.position.set(-20, 2, 0);
-    wallW.rotation.y = Math.PI / 2;
-    wallW.receiveShadow = true;
-    addStaticObject(wallW);
-
-    // --- Add Jumping Obstacles/Platforms ---
-    const boxGeo = new THREE.BoxGeometry(2, 1, 2);
-    const boxMat = new THREE.MeshStandardMaterial({ color: 0x654321 }); // Brown wooden boxes
-
-    const box1 = new THREE.Mesh(boxGeo, boxMat);
-    box1.position.set(5, 0.5, -5); // Top surface is at Y=1
-    box1.castShadow = true;
-    box1.receiveShadow = true;
-    addStaticObject(box1);
-
-    const box2 = new THREE.Mesh(boxGeo, boxMat);
-    box2.position.set(7, 1.5, -5); // Top surface is at Y=2
-    box2.castShadow = true;
-    box2.receiveShadow = true;
-    addStaticObject(box2);
-    
-    // A wider platform box
-    const platformGeo = new THREE.BoxGeometry(4, 2, 4);
-    const box3 = new THREE.Mesh(platformGeo, boxMat);
-    box3.position.set(10, 1, -10); // Top surface is at Y=2
-    box3.castShadow = true;
-    box3.receiveShadow = true;
-    addStaticObject(box3);
-
-    // A high platform that requires a crouch-jump (Surface at Y=1.4)
-    const highBoxGeo = new THREE.BoxGeometry(2, 1.4, 2);
-    const highBox = new THREE.Mesh(highBoxGeo, boxMat);
-    highBox.position.set(-5, 0.7, -10); 
-    highBox.castShadow = true;
-    highBox.receiveShadow = true;
-    addStaticObject(highBox);
+    boxes.forEach(b => {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(...b.size), boxMat);
+        mesh.position.set(...b.pos);
+        addStaticObject(mesh);
+    });
 }
