@@ -1,10 +1,52 @@
 import { setupTargets, getTotalTargets } from './targets.js';
-import { gameStatus } from './state.js';
+import { gameStatus, camera, cameraAngle, applyCameraRotation } from './state.js';
 import { resetAmmo } from './weapon.js';
-import { fetchLeaderboard, updateLeaderboardUI, getRank, getGlobalRank } from './leaderboard.js';
+import { fetchLeaderboard, updateLeaderboardUI, getGlobalRank } from './leaderboard.js';
+import { setupPlayer } from './player.js';
+
+function setLeaderboard(visible) {
+    const el = document.getElementById('leaderboard-panel');
+    if (el) el.style.display = visible ? 'block' : 'none';
+}
+
+export function showMainMenu() {
+    document.getElementById('main-menu').style.display = 'flex';
+    document.getElementById('ready-screen').style.display = 'none';
+    document.getElementById('pause-menu').style.display = 'none';
+    document.getElementById('results-overlay').style.display = 'none';
+    document.getElementById('keybinds-screen').style.display = 'none';
+    document.getElementById('hud').style.display = 'none';
+    setLeaderboard(true);
+    fetchLeaderboard().then(data => updateLeaderboardUI(data));
+}
+
+export function showReadyScreen() {
+    document.getElementById('main-menu').style.display = 'none';
+    document.getElementById('pause-menu').style.display = 'none';
+    document.getElementById('results-overlay').style.display = 'none';
+    document.getElementById('hud').style.display = 'none';
+    document.getElementById('submit-panel').style.display = 'none';
+    document.getElementById('ready-screen').style.display = 'flex';
+    setLeaderboard(false);
+}
+
+export function resetLevel() {
+    setupTargets();
+    const total = getTotalTargets();
+    gameStatus.totalTargets = total;
+    gameStatus.targetsLeft = total;
+    gameStatus.running = false;
+    resetAmmo();
+    // Reset player position synchronously
+    setupPlayer(null, camera);
+    camera.position.set(0, 1.37, 0);
+    // Reset camera angle synchronously
+    cameraAngle.pitch = 0;
+    cameraAngle.yaw = 0;
+    applyCameraRotation();
+}
 
 export function startGame() {
-    console.log("gameLogic: startGame called");
     setupTargets();
     const total = getTotalTargets();
     gameStatus.totalTargets = total;
@@ -13,24 +55,10 @@ export function startGame() {
     gameStatus.elapsedTime = 0;
     gameStatus.running = true;
     resetAmmo();
-
-    // Reset player position and rotation on start/restart
-    import('./player.js').then(m => m.setupPlayer());
-    import('./controls.js').then(m => m.resetRotation());
-
-    // Restore UI state
-    const startBtn = document.getElementById('start-btn');
-    const completionMsg = document.getElementById('completion-msg');
-    const submitPanel = document.getElementById('submit-panel');
-    const leaderboardPanel = document.getElementById('leaderboard-panel');
-    
-    if (startBtn) startBtn.style.display = 'block';
-    if (completionMsg) completionMsg.style.display = 'none';
-    if (submitPanel) submitPanel.style.display = 'none';
-    if (leaderboardPanel) {
-        // Just refresh the data, don't force it to show here
-        fetchLeaderboard().then(updateLeaderboardUI);
-    }
+    setupPlayer(null, camera);
+    cameraAngle.pitch = 0;
+    cameraAngle.yaw = 0;
+    applyCameraRotation();
 }
 
 export function decrementTargets() {
@@ -40,77 +68,79 @@ export function decrementTargets() {
         const finalTime = gameStatus.elapsedTime + (performance.now() - gameStatus.startTime) / 1000;
         document.exitPointerLock();
         
-        const startBtn = document.getElementById('start-btn');
+        const resultsOverlay = document.getElementById('results-overlay');
         const completionMsg = document.getElementById('completion-msg');
+        const hud = document.getElementById('hud');
+        const submitPanel = document.getElementById('submit-panel');
+
+        if (hud) hud.style.display = 'none';
+        if (resultsOverlay) resultsOverlay.style.display = 'flex';
         
-        if (startBtn) startBtn.style.display = 'none';
+        // Show leaderboard on the results screen (on the left)
+        setLeaderboard(true);
+
+        // Show submission panel
+        if (submitPanel) {
+            submitPanel.style.display = 'block';
+            const nameInput = document.getElementById('name-input');
+            if (nameInput) { nameInput.value = ''; nameInput.focus(); }
+            document.getElementById('submit-btn').dataset.time = finalTime;
+        }
+
         if (completionMsg) {
             const shareText = `I cleared ${gameStatus.totalTargets}/${gameStatus.totalTargets} targets in ${finalTime.toFixed(2)}s\nhttps://edwardxie.io/Daily-Aim-Course`;
             
-            // Get current leaderboard to find rank
             Promise.all([fetchLeaderboard(), getGlobalRank(finalTime)]).then(([data, rank]) => {
                 let title = "Course Cleared!";
-                let titleColor = "#00ff00";
+                let titleColor = "#4ade80";
 
-                if (rank === 1) { title = "NEW WORLD RECORD!"; titleColor = "#ffd700"; }
-                else if (rank === 2) { title = "SILVER PLACEMENT!"; titleColor = "#c0c0c0"; }
-                else if (rank === 3) { title = "BRONZE PLACEMENT!"; titleColor = "#cd7f32"; }
+                if (rank === 1) { title = "🥇 World Record!"; titleColor = "#ffd700"; }
+                else if (rank === 2) { title = "🥈 Silver!"; titleColor = "#c0c0c0"; }
+                else if (rank === 3) { title = "🥉 Bronze!"; titleColor = "#cd7f32"; }
 
-                updateLeaderboardUI(data, finalTime, rank); // Show preview with correct rank
+                updateLeaderboardUI(data, finalTime, rank);
 
                 completionMsg.innerHTML = `
-                    <div style="background: rgba(0,0,0,0.8); padding: 30px; border-radius: 12px; border: 2px solid #555;">
-                        <h1 style="margin-top: 0; color: ${titleColor};">${title}</h1>
-                        <p style="font-size: 24px;">Time: ${finalTime.toFixed(2)}s (Rank #${rank})</p>
-                        <button id="copy-btn" style="
-                            background: #00ff00; 
-                            color: black; 
-                            border: none; 
-                            padding: 10px 20px; 
-                            font-weight: bold; 
-                            border-radius: 5px; 
-                            cursor: pointer;
-                            margin-bottom: 10px;
-                        ">Copy Result</button>
-                        <p style="font-size: 14px; color: #aaa;">Click background to reset</p>
+                    <div style="background: rgba(10,10,15,0.95); padding: 36px 44px; border-radius: 14px; border: 1px solid #333; box-shadow: 0 20px 60px rgba(0,0,0,0.8); text-align: center;">
+                        <h1 style="margin-top: 0; color: ${titleColor}; font-size: 1.6rem;">${title}</h1>
+                        <p style="font-size: 2rem; margin: 0 0 6px 0; color: white; font-weight: 700;">${finalTime.toFixed(2)}s</p>
+                        <p style="font-size: 0.9rem; color: #666; margin: 0 0 24px 0;">Rank #${rank}</p>
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button id="copy-btn" style="background: #1a1a22; color: white; border: 1px solid #444; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-family: Inter, sans-serif;">Share</button>
+                            <button id="play-again-btn" style="background: #1a1a22; color: white; border: 1px solid #4ade80; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-family: Inter, sans-serif;">↺ Play Again</button>
+                            <button id="back-to-menu-btn" style="background: #4ade80; color: #0a0a0a; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-family: Inter, sans-serif; font-weight: 600;">Main Menu</button>
+                        </div>
                     </div>
                 `;
-                completionMsg.style.display = 'block';
 
                 document.getElementById('copy-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
                     navigator.clipboard.writeText(shareText).then(() => {
                         const btn = document.getElementById('copy-btn');
                         btn.innerText = "Copied!";
-                        btn.style.background = "#fff";
-                        setTimeout(() => {
-                            btn.innerText = "Copy Result";
-                            btn.style.background = "#00ff00";
-                        }, 2000);
+                        setTimeout(() => { btn.innerText = "Share"; }, 2000);
                     });
                 });
-            });
-        }
 
-        // Show leaderboard submission if they finished
-        const submitPanel = document.getElementById('submit-panel');
-        if (submitPanel) {
-            submitPanel.style.display = 'block';
-            document.getElementById('name-input').value = '';
-            document.getElementById('name-input').focus();
-            
-            // Store the final time on the submit button for the click handler
-            document.getElementById('submit-btn').dataset.time = finalTime;
+                document.getElementById('play-again-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    resetLevel();
+                    showReadyScreen();
+                });
+
+                document.getElementById('back-to-menu-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showMainMenu();
+                });
+            });
         }
     }
 }
 
 export function pauseGame() {
-    // Timer no longer pauses
+    // Timer keeps running
 }
 
 export function resumeGame() {
-    // Timer no longer resumes
+    // Timer keeps running
 }
-
-

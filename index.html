@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daily Aim Course</title>
     <link rel="icon" href="data:,">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -14,42 +14,67 @@
     <div id="crosshair"></div>
     
     <div id="ui-overlay">
+
+        <!-- Leaderboard panel: lives at the overlay level, shown on main menu + results -->
         <div id="leaderboard-panel">
-            <h3>Top 10 Leaders</h3>
+            <h3 id="leaderboard-title">Daily Top 10</h3>
             <div id="leaderboard-list">Loading...</div>
         </div>
 
-        <div id="start-screen">
-            <h1>Daily Aim Course</h1>
-            <p id="start-btn">Click anywhere to start</p>
-            
-            <div id="submit-panel" style="display: none; background: rgba(74, 222, 128, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #4ade80; margin-bottom: 20px;">
-                <p style="margin: 0 0 10px 0; color: #4ade80;">New Record!</p>
-                <input type="text" id="name-input" maxlength="3" placeholder="AAA" style="width: 80px; font-size: 1.5rem; text-transform: uppercase;">
-                <button id="submit-btn" class="menu-btn" style="margin-left: 10px;">Submit</button>
-            </div>
+        <!-- ======================== MAIN MENU ======================== -->
+        <div id="main-menu">
+            <div id="main-menu-center">
+                <h1>Daily Aim Course</h1>
+                <p id="daily-date" class="subtitle"></p>
 
-            <div class="settings">
-                <div class="setting-row">
-                    <label>Sensitivity</label>
-                    <div class="control-group">
-                        <input type="range" id="sens-slider" min="0.1" max="10" step="0.01" value="1.0">
-                        <input type="number" id="sens-input" value="1.0" step="0.01">
+                <div class="menu-buttons">
+                    <button id="daily-game-btn" class="big-btn">▶ Daily Game</button>
+                    <button id="archives-btn" class="big-btn secondary-btn">📅 Archives</button>
+                </div>
+
+                <div class="settings">
+                    <div class="setting-row">
+                        <label>Sensitivity</label>
+                        <div class="control-group">
+                            <input type="range" id="sens-slider" min="0.1" max="10" step="0.01" value="1.0">
+                            <input type="number" id="sens-input" value="1.0" step="0.01">
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <label>Volume</label>
+                        <div class="control-group">
+                            <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.8">
+                            <input type="number" id="volume-input" value="80" step="1">
+                            <span style="font-size: 0.8rem; color: #888;">%</span>
+                        </div>
                     </div>
                 </div>
-                <div class="setting-row">
-                    <label>Volume</label>
-                    <div class="control-group">
-                        <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.8">
-                        <input type="number" id="volume-input" value="80" step="1">
-                        <span style="font-size: 0.8rem; color: #888;">%</span>
-                    </div>
+                <button id="edit-keybinds-btn" class="menu-btn" style="margin-top: 16px; width: 100%;">Edit Keybinds</button>
+            </div>
+        </div>
+
+        <!-- ======================== READY SCREEN ======================== -->
+        <div id="ready-screen" style="display: none;">
+            <div id="ready-content">
+                <p class="ready-hint">Click anywhere to start</p>
+                <p class="ready-sub">Press <kbd>Esc</kbd> to open menu</p>
+            </div>
+        </div>
+
+        <!-- ======================== PAUSE MENU ======================== -->
+        <div id="pause-menu" style="display: none;">
+            <div id="pause-card">
+                <h2>Paused</h2>
+                <div class="pause-buttons">
+                    <button id="pause-resume-btn" class="menu-btn">▶ Resume</button>
+                    <button id="pause-restart-btn" class="menu-btn">↺ Restart</button>
+                    <button id="pause-keybinds-btn" class="menu-btn">⌨ Keybinds</button>
+                    <button id="pause-mainmenu-btn" class="menu-btn danger-btn">⟵ Main Menu</button>
                 </div>
             </div>
-            <button id="edit-keybinds-btn" class="menu-btn" style="margin-top: 20px;">Edit Keybinds</button>
-            <p id="completion-msg" style="display: none; margin-top: 20px; color: #4ade80; font-weight: bold;"></p>
         </div>
-        
+
+        <!-- ======================== KEYBINDS SCREEN ======================== -->
         <div id="keybinds-screen" style="display: none;">
             <h2>Keybinds</h2>
             <div class="keybinds-list" id="keybinds-list">
@@ -58,10 +83,22 @@
             <button id="save-keybinds-btn" class="menu-btn" style="margin-top: 20px;">Back</button>
         </div>
 
+        <!-- ======================== HUD (in-game) ======================== -->
         <div id="hud" style="display: none;">
             <div id="timer">0.00s</div>
             <div id="ammo-display">30 / 90</div>
             <div id="target-count">Targets: 0/0</div>
+        </div>
+
+        <!-- ======================== RESULTS OVERLAY ======================== -->
+        <div id="results-overlay" style="display: none;">
+            <div id="completion-msg"></div>
+            <!-- Submit panel lives here on the results screen -->
+            <div id="submit-panel" style="display: none;">
+                <p class="submit-label">Enter your initials</p>
+                <input type="text" id="name-input" maxlength="3" placeholder="AAA">
+                <button id="submit-btn" class="menu-btn" style="margin-top: 10px; width: 100%;">Submit to Leaderboard</button>
+            </div>
         </div>
     </div>
     

@@ -9,6 +9,13 @@ export const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window
 camera.position.set(0, 1.37, 0);
 scene.add(camera);
 
+// Camera rotation state — stored here so any module can reset without circular deps
+export const cameraAngle = { pitch: 0, yaw: 0 };
+export function applyCameraRotation() {
+    const euler = new THREE.Euler(cameraAngle.pitch, cameraAngle.yaw, 0, 'YXZ');
+    camera.quaternion.setFromEuler(euler);
+}
+
 export const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -45,7 +52,7 @@ export const keyBinds = {
     left: 'KeyA',
     right: 'KeyD',
     jump: 'Space',
-    crouch: 'ControlLeft',
+    crouch: 'KeyC',
     walk: 'ShiftLeft',
     shoot: 'Mouse0',
     reload: 'KeyR',

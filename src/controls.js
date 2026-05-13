@@ -1,9 +1,8 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { camera, inputState, gameStatus, keyBinds, settings } from './state.js';
-import { updateVolume } from './sfx.js';
+import { camera, inputState, gameStatus, keyBinds, settings, cameraAngle, applyCameraRotation } from './state.js';
 import { setupWeapon, startReload } from './weapon.js';
 import { shootTarget } from './targets.js';
-import { startGame, pauseGame } from './gameLogic.js';
+import { startGame, pauseGame, showReadyScreen, showMainMenu, resetLevel } from './gameLogic.js';
 
 export function loadSettings() {
     const savedSens = localStorage.getItem('aimCourse_sens');
@@ -37,84 +36,48 @@ export function setSens(val) {
     localStorage.setItem('aimCourse_sens', val.toString());
 }
 
-const euler = new THREE.Euler(0, 0, 0, 'YXZ');
-let pitch = 0;
-let yaw = 0;
 
 export let isListeningForKey = false;
 export function setIsListeningForKey(val) { isListeningForKey = val; }
 
 export function resetRotation() {
-    pitch = 0;
-    yaw = 0;
-    updateCameraRotation();
+    cameraAngle.pitch = 0;
+    cameraAngle.yaw = 0;
+    applyCameraRotation();
 }
 
 export function setupControls() {
-    const startScreen = document.getElementById('start-screen');
     const hud = document.getElementById('hud');
-    const keybindsScreen = document.getElementById('keybinds-screen');
     
     setupWeapon(camera);
 
-    // Settings UI Sync
-    const sensSlider = document.getElementById('sens-slider');
-    const sensInput = document.getElementById('sens-input');
-    const volSlider = document.getElementById('volume-slider');
-    const volInput = document.getElementById('volume-input');
 
-    const updateSensUI = (val) => {
-        const num = Math.max(0.01, Math.min(10, parseFloat(val)));
-        if (isNaN(num)) return;
-        settings.sensitivity = num;
-        sensSlider.value = num;
-        sensInput.value = num.toFixed(2);
-        localStorage.setItem('aimCourse_sens', num.toString());
-    };
 
-    const updateVolUI = (val, isPercent = false) => {
-        let num = parseFloat(val);
-        if (isNaN(num)) return;
-        if (isPercent) num = num / 100;
-        settings.volume = Math.max(0, Math.min(1, num));
-        volSlider.value = settings.volume;
-        volInput.value = Math.round(settings.volume * 100);
-        updateVolume();
-        localStorage.setItem('aimCourse_volume', settings.volume.toString());
-    };
-
-    // Initial sync from loaded state
-    sensSlider.value = settings.sensitivity;
-    sensInput.value = settings.sensitivity.toFixed(2);
-    volSlider.value = settings.volume;
-    volInput.value = Math.round(settings.volume * 100);
-    updateVolume();
-
-    sensSlider.addEventListener('input', (e) => updateSensUI(e.target.value));
-    sensInput.addEventListener('change', (e) => updateSensUI(e.target.value));
-    volSlider.addEventListener('input', (e) => updateVolUI(e.target.value));
-    volInput.addEventListener('change', (e) => updateVolUI(e.target.value, true));
 
     document.addEventListener('click', (e) => {
         if (isListeningForKey) return;
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('#keybinds-screen') || e.target.closest('#start-screen')) return;
+        // Only request pointer lock from the ready screen
+        const readyScreen = document.getElementById('ready-screen');
+        if (readyScreen.style.display === 'none') return;
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
         
         if (!document.pointerLockElement) {
             document.body.requestPointerLock({ unadjustedMovement: true }).catch(() => {
                 document.body.requestPointerLock();
             });
-
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            }
         }
     });
 
     document.addEventListener('pointerlockchange', () => {
         const leaderboardPanel = document.getElementById('leaderboard-panel');
+        const readyScreen = document.getElementById('ready-screen');
+        const pauseMenu = document.getElementById('pause-menu');
+        const resultsOverlay = document.getElementById('results-overlay');
+
         if (document.pointerLockElement === document.body) {
-            startScreen.style.display = 'none';
-            keybindsScreen.style.display = 'none';
+            // Entering game — hide all menus
+            readyScreen.style.display = 'none';
+            if (pauseMenu) pauseMenu.style.display = 'none';
             if (leaderboardPanel) leaderboardPanel.style.display = 'none';
             hud.style.display = 'flex';
             document.addEventListener('mousemove', onMouseMove);
@@ -123,12 +86,32 @@ export function setupControls() {
                 startGame();
             }
         } else {
-            if (gameStatus.running) pauseGame();
-            startScreen.style.display = 'block';
-            if (leaderboardPanel) leaderboardPanel.style.display = 'block';
-            document.getElementById('start-btn').innerText = "Click anywhere to resume";
             document.removeEventListener('mousemove', onMouseMove);
             for (const key in inputState) inputState[key] = false;
+
+            // If the game just finished, results overlay handles the screen — don't show pause
+            if (resultsOverlay && resultsOverlay.style.display !== 'none') return;
+
+            if (gameStatus.running) {
+                pauseGame();
+                // Keep HUD visible so timer is shown; overlay the pause menu on top
+                if (pauseMenu) pauseMenu.style.display = 'flex';
+                if (leaderboardPanel) leaderboardPanel.style.display = 'block';
+            } else {
+                // Not running and no results = going to ready screen
+                hud.style.display = 'none';
+                readyScreen.style.display = 'flex';
+            }
+        }
+    });
+
+    // ESC from ready screen → go to main menu
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Escape' && !document.pointerLockElement) {
+            const readyScreen = document.getElementById('ready-screen');
+            if (readyScreen && readyScreen.style.display !== 'none') {
+                showMainMenu();
+            }
         }
     });
 
@@ -148,14 +131,13 @@ export function setupControls() {
 }
 
 export function applyRecoil(x, y) {
-    yaw -= x;
-    pitch += y;
-    pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+    cameraAngle.yaw -= x;
+    cameraAngle.pitch += y;
+    cameraAngle.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraAngle.pitch));
 }
 
 export function updateCameraRotation() {
-    euler.set(pitch, yaw, 0);
-    camera.quaternion.setFromEuler(euler);
+    applyCameraRotation();
 }
 
 function onMouseMove(event) {
@@ -165,10 +147,11 @@ function onMouseMove(event) {
     if (Math.abs(movementX) > 2000 || Math.abs(movementY) > 2000) return;
 
     const CSGO_YAW = 0.022;
-    yaw -= movementX * (settings.sensitivity * CSGO_YAW) * (Math.PI / 180);
-    pitch -= movementY * (settings.sensitivity * CSGO_YAW) * (Math.PI / 180);
-    yaw = ((yaw + Math.PI) % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2) - Math.PI;
-    pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+    cameraAngle.yaw -= movementX * (settings.sensitivity * CSGO_YAW) * (Math.PI / 180);
+    cameraAngle.pitch -= movementY * (settings.sensitivity * CSGO_YAW) * (Math.PI / 180);
+    cameraAngle.yaw = ((cameraAngle.yaw + Math.PI) % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2) - Math.PI;
+    cameraAngle.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraAngle.pitch));
+    applyCameraRotation();
 }
 
 function onKeyDown(event) {
@@ -176,7 +159,10 @@ function onKeyDown(event) {
     
     if (event.code === keyBinds.reset) {
         event.preventDefault();
-        startGame();
+        // Reset level visually before exiting pointer lock
+        resetLevel();
+        // running is now false, so pointerlockchange will route to ready screen
+        document.exitPointerLock();
         return;
     }
 

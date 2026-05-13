@@ -1,39 +1,108 @@
 import { setSens, getSens, setKeyBind, setIsListeningForKey, loadSettings } from './controls.js';
 import { getAmmoInfo } from './weapon.js';
-import { gameStatus, keyBinds } from './state.js';
+import { gameStatus, keyBinds, settings } from './state.js';
 import { fetchLeaderboard, submitTime, updateLeaderboardUI } from './leaderboard.js';
+import { showMainMenu, showReadyScreen, startGame } from './gameLogic.js';
+import { updateVolume } from './sfx.js';
 
 export function setupUI() {
     loadSettings();
 
-    const sensInput = document.getElementById('sens-input');
-    const editKeybindsBtn = document.getElementById('edit-keybinds-btn');
-    const saveKeybindsBtn = document.getElementById('save-keybinds-btn');
-    const startScreen = document.getElementById('start-screen');
-    const keybindsScreen = document.getElementById('keybinds-screen');
+    // Set today's date in the main menu subtitle
+    const dailyDate = document.getElementById('daily-date');
+    if (dailyDate) {
+        dailyDate.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    }
 
+    // Settings sliders
+    const sensSlider = document.getElementById('sens-slider');
+    const sensInput = document.getElementById('sens-input');
+    const volSlider = document.getElementById('volume-slider');
+    const volInput = document.getElementById('volume-input');
+
+    sensSlider.value = getSens();
     sensInput.value = getSens();
 
-    sensInput.addEventListener('input', (e) => {
-        setSens(parseFloat(e.target.value) || 1.0);
+    sensSlider.addEventListener('input', (e) => setSens(parseFloat(e.target.value)));
+    sensInput.addEventListener('change', (e) => setSens(parseFloat(e.target.value) || 1.0));
+
+    // Volume
+    const updateVolUI = (val, isPercent = false) => {
+        let num = parseFloat(val);
+        if (isNaN(num)) return;
+        if (isPercent) num = num / 100;
+        settings.volume = Math.max(0, Math.min(1, num));
+        volSlider.value = settings.volume;
+        volInput.value = Math.round(settings.volume * 100);
+        updateVolume();
+        localStorage.setItem('aimCourse_volume', settings.volume.toString());
+    };
+    volSlider.value = settings.volume;
+    volInput.value = Math.round(settings.volume * 100);
+    updateVolume();
+    volSlider.addEventListener('input', (e) => updateVolUI(e.target.value));
+    volInput.addEventListener('change', (e) => updateVolUI(e.target.value, true));
+
+    // ---- Main Menu buttons ----
+    document.getElementById('daily-game-btn').addEventListener('click', () => {
+        showReadyScreen();
     });
 
-    editKeybindsBtn.addEventListener('click', () => {
-        startScreen.style.display = 'none';
-        keybindsScreen.style.display = 'block';
+    document.getElementById('archives-btn').addEventListener('click', () => {
+        alert('Archives coming soon!');
+    });
+
+    document.getElementById('edit-keybinds-btn').addEventListener('click', () => {
+        document.getElementById('main-menu').style.display = 'none';
+        const kb = document.getElementById('keybinds-screen');
+        kb.style.display = 'flex';
+        kb.dataset.from = 'main-menu';
         renderKeybinds();
     });
 
-    saveKeybindsBtn.addEventListener('click', () => {
-        keybindsScreen.style.display = 'none';
-        startScreen.style.display = 'block';
+    // ---- Pause menu buttons ----
+    document.getElementById('pause-resume-btn').addEventListener('click', () => {
+        document.getElementById('pause-menu').style.display = 'none';
+        document.body.requestPointerLock({ unadjustedMovement: true }).catch(() => {
+            document.body.requestPointerLock();
+        });
     });
 
+    document.getElementById('pause-restart-btn').addEventListener('click', () => {
+        showReadyScreen();
+    });
+
+    document.getElementById('pause-keybinds-btn').addEventListener('click', () => {
+        document.getElementById('pause-menu').style.display = 'none';
+        const kb = document.getElementById('keybinds-screen');
+        kb.style.display = 'flex';
+        kb.dataset.from = 'pause-menu';
+        renderKeybinds();
+    });
+
+    document.getElementById('pause-mainmenu-btn').addEventListener('click', () => {
+        showMainMenu();
+    });
+
+    // ---- Keybinds back button ----
+    document.getElementById('save-keybinds-btn').addEventListener('click', () => {
+        const kb = document.getElementById('keybinds-screen');
+        kb.style.display = 'none';
+        const from = kb.dataset.from || 'main-menu';
+        if (from === 'pause-menu') {
+            document.getElementById('pause-menu').style.display = 'flex';
+        } else {
+            document.getElementById('main-menu').style.display = 'flex';
+        }
+    });
+
+    // ---- Score submission ----
     const submitBtn = document.getElementById('submit-btn');
     const nameInput = document.getElementById('name-input');
     const submitPanel = document.getElementById('submit-panel');
 
-    submitBtn.addEventListener('click', async () => {
+    submitBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
         const name = nameInput.value.trim().toUpperCase() || 'AAA';
         const time = parseFloat(submitBtn.dataset.time);
         
@@ -43,15 +112,16 @@ export function setupUI() {
         const success = await submitTime(name, time);
         if (success) {
             submitPanel.style.display = 'none';
+            // Refresh leaderboard so the new score appears
             const data = await fetchLeaderboard();
             updateLeaderboardUI(data);
         }
         
         submitBtn.disabled = false;
-        submitBtn.innerText = "Submit";
+        submitBtn.innerText = "Submit to Leaderboard";
     });
 
-    // Initial fetch
+    // Initial leaderboard fetch
     fetchLeaderboard().then(updateLeaderboardUI);
 }
 
@@ -76,23 +146,21 @@ function renderKeybinds() {
             btn.classList.add('listening');
             setIsListeningForKey(true);
 
-            const onKeyDown = (e) => {
+            const onKey = (e) => {
                 e.preventDefault();
                 let code = e.code;
-                if (e.type === 'mousedown') {
-                    code = 'Mouse' + e.button;
-                }
+                if (e.type === 'mousedown') code = 'Mouse' + e.button;
                 
                 setKeyBind(action, code);
                 renderKeybinds(); 
                 setIsListeningForKey(false);
                 
-                document.removeEventListener('keydown', onKeyDown);
-                document.removeEventListener('mousedown', onKeyDown);
+                document.removeEventListener('keydown', onKey);
+                document.removeEventListener('mousedown', onKey);
             };
 
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('mousedown', onKeyDown);
+            document.addEventListener('keydown', onKey);
+            document.addEventListener('mousedown', onKey);
         });
 
         row.appendChild(label);
