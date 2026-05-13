@@ -165,6 +165,39 @@ body, html {
     justify-content: space-between;
     font-family: 'Courier New', Courier, monospace;
     font-size: 1rem;
+    padding: 6px 10px;
+    border-radius: 4px;
+    transition: background 0.3s;
+}
+
+.leader-row.gold {
+    background: rgba(255, 215, 0, 0.15);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+.leader-row.gold .rank { color: #ffd700; font-weight: bold; }
+
+.leader-row.silver {
+    background: rgba(192, 192, 192, 0.15);
+    border: 1px solid rgba(192, 192, 192, 0.3);
+}
+.leader-row.silver .rank { color: #c0c0c0; font-weight: bold; }
+
+.leader-row.bronze {
+    background: rgba(205, 127, 50, 0.15);
+    border: 1px solid rgba(205, 127, 50, 0.3);
+}
+.leader-row.bronze .rank { color: #cd7f32; font-weight: bold; }
+
+.leader-row.preview-row {
+    background: rgba(74, 222, 128, 0.2);
+    border: 1px dashed #4ade80;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
 }
 
 .leader-row .rank {

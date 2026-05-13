@@ -13,7 +13,8 @@ export async function fetchLeaderboard() {
     }
 
     try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=time.asc&limit=10`, {
+        // Fetch Top 50 to allow for preview rows just outside the Top 10
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=time.asc&limit=50`, {
             headers: {
                 'apikey': SUPABASE_KEY,
                 'Authorization': `Bearer ${SUPABASE_KEY}`
@@ -54,21 +55,83 @@ export async function submitTime(name, time) {
     }
 }
 
-export function updateLeaderboardUI(data) {
+export function getRank(data, time) {
+    // Returns 1-indexed rank based on the provided data array
+    let rank = 1;
+    for (const entry of data) {
+        if (time < entry.time) break;
+        rank++;
+    }
+    return rank;
+}
+
+export async function getGlobalRank(time) {
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+        const local = JSON.parse(localStorage.getItem('aim_leaderboard') || '[]');
+        return getRank(local, time);
+    }
+
+    try {
+        // Efficiently get the count of entries with a better time
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?time=lt.${time}&select=count`, {
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Range': '0-0', // We don't want the actual data
+                'Prefer': 'count=exact'
+            }
+        });
+        const contentRange = response.headers.get('content-range');
+        if (contentRange) {
+            const total = parseInt(contentRange.split('/')[1]);
+            return total + 1;
+        }
+        return 1;
+    } catch (e) {
+        console.error("Rank fetch failed", e);
+        return 1;
+    }
+}
+
+export function updateLeaderboardUI(data, currentTime = null, forcedRank = null) {
     const list = document.getElementById('leaderboard-list');
     if (!list) return;
     list.innerHTML = '';
 
-    if (data.length === 0) {
+    // Create a combined list for rendering if there's a current time preview
+    let displayData = [...data];
+    let previewRank = forcedRank || (currentTime !== null ? getRank(data, currentTime) : -1);
+
+    if (currentTime !== null) {
+        // If the rank is within our fetched data (Top 50), insert it at the right spot
+        if (previewRank <= displayData.length + 1 && previewRank <= 50) {
+            displayData.splice(previewRank - 1, 0, { name: 'YOU', time: currentTime, isPreview: true });
+        } else {
+            // If it's way outside, we'll append it specially at the end of the limited view
+            displayData.push({ name: 'YOU', time: currentTime, isPreview: true, forceRank: previewRank });
+        }
+    }
+
+    if (displayData.length === 0) {
         list.innerHTML = '<div style="color: #666; font-size: 0.8rem;">No scores yet. Be the first!</div>';
         return;
     }
 
-    data.forEach((entry, i) => {
+    // Limit to 10 entries normally, but if preview is lower, show it anyway
+    const maxShow = previewRank > 10 ? previewRank : 10;
+
+    displayData.slice(0, maxShow).forEach((entry, i) => {
+        const rank = entry.forceRank || (i + 1);
         const row = document.createElement('div');
         row.className = 'leader-row';
+        
+        if (entry.isPreview) row.classList.add('preview-row');
+        if (rank === 1) row.classList.add('gold');
+        else if (rank === 2) row.classList.add('silver');
+        else if (rank === 3) row.classList.add('bronze');
+
         row.innerHTML = `
-            <span class="rank">${i + 1}.</span>
+            <span class="rank">${rank}.</span>
             <span class="name">${entry.name}</span>
             <span class="time">${entry.time.toFixed(2)}s</span>
         `;
