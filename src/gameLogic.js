@@ -1,4 +1,4 @@
-import { setupTargets, getTotalTargets } from './targets.js';
+import { setupTargets, resetTargets, getTotalTargets } from './targets.js';
 import { gameStatus, camera, cameraAngle, applyCameraRotation } from './state.js';
 import { resetAmmo } from './weapon.js';
 import { fetchLeaderboard, updateLeaderboardUI, getGlobalRank } from './leaderboard.js';
@@ -32,7 +32,7 @@ export function showReadyScreen() {
 }
 
 export function resetLevel() {
-    setupTargets();
+    resetTargets();
     const total = getTotalTargets();
     gameStatus.totalTargets = total;
     gameStatus.targetsLeft = total;

@@ -27,18 +27,24 @@ export function setupPlayer(scene, camera) {
     velocity.set(0, 0, 0);
 }
 
-function getHull(pos, currentTuck) {
+// Reusable objects for physics/collisions
+const _hull = new THREE.Box3();
+const _hullCenter = new THREE.Vector3();
+const _hullSize = new THREE.Vector3();
+const _checkPos = new THREE.Vector3();
+
+function updateHull(pos, currentTuck) {
     const height = 1.37 - currentTuck;
-    return new THREE.Box3().setFromCenterAndSize(
-        new THREE.Vector3(pos.x, pos.y + height / 2, pos.z),
-        new THREE.Vector3(0.6, height, 0.6)
-    );
+    _hullCenter.set(pos.x, pos.y + height / 2, pos.z);
+    _hullSize.set(0.6, height, 0.6);
+    _hull.setFromCenterAndSize(_hullCenter, _hullSize);
+    return _hull;
 }
 
 function checkCollision(pos, currentTuck) {
-    const hull = getHull(pos, currentTuck);
-    for (const box of collidableBoxes) {
-        if (hull.intersectsBox(box)) return true;
+    const hull = updateHull(pos, currentTuck);
+    for (let i = 0; i < collidableBoxes.length; i++) {
+        if (hull.intersectsBox(collidableBoxes[i])) return true;
     }
     return false;
 }
@@ -59,8 +65,14 @@ export function updatePlayer(delta) {
     const nextX = playerPosition.x + moveDir.x * moveSpeed;
     const nextZ = playerPosition.z + moveDir.z * moveSpeed;
 
-    if (!checkCollision(new THREE.Vector3(nextX, playerPosition.y + 0.01, playerPosition.z), tuckAmount)) playerPosition.x = nextX;
-    if (!checkCollision(new THREE.Vector3(playerPosition.x, playerPosition.y + 0.01, nextZ), tuckAmount)) playerPosition.z = nextZ;
+    const nextX = playerPosition.x + moveDir.x * moveSpeed;
+    const nextZ = playerPosition.z + moveDir.z * moveSpeed;
+
+    _checkPos.set(nextX, playerPosition.y + 0.01, playerPosition.z);
+    if (!checkCollision(_checkPos, tuckAmount)) playerPosition.x = nextX;
+    
+    _checkPos.set(playerPosition.x, playerPosition.y + 0.01, nextZ);
+    if (!checkCollision(_checkPos, tuckAmount)) playerPosition.z = nextZ;
 
     if (inputState.jump && isGrounded) {
         velocity.y = jumpVelocity;
@@ -75,9 +87,11 @@ export function updatePlayer(delta) {
         velocity.y = 0;
         isGrounded = true;
     } else {
-        const hull = getHull(new THREE.Vector3(playerPosition.x, nextY, playerPosition.z), tuckAmount);
+        _checkPos.set(playerPosition.x, nextY, playerPosition.z);
+        const hull = updateHull(_checkPos, tuckAmount);
         let collided = false;
-        for (const box of collidableBoxes) {
+        for (let i = 0; i < collidableBoxes.length; i++) {
+            const box = collidableBoxes[i];
             if (hull.intersectsBox(box)) {
                 if (velocity.y < 0) {
                     nextY = box.max.y;

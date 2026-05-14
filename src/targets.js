@@ -101,30 +101,71 @@ function getBodyTexture() {
     return easterEggMode ? null : robotBodyTexture;
 }
 
-// Live-swap textures on all existing targets without rebuilding
-function applyTextureMode() {
-    targets.forEach(wrapper => {
-        if (wrapper.userData.isFalling) return;
+// Update all targets with current textures (Robot vs Easter Egg)
+export function applyTextureMode() {
+    const headTex = getHeadTexture();
+    const bodyTex = getBodyTexture();
 
+    targets.forEach(wrapper => {
         wrapper.children.forEach(child => {
             if (child.userData.isHead) {
-                const newTex = easterEggMode
+                const newTex = (easterEggMode && headTex === null) 
                     ? (Math.random() < 0.01 ? easterEggRareTexture : easterEggFaces[Math.floor(Math.random() * easterEggFaces.length)])
-                    : robotHeadTexture;
-                // The front face material is index 4
+                    : headTex;
                 if (Array.isArray(child.material)) {
                     child.material[4].map = newTex;
                     child.material[4].needsUpdate = true;
                 }
             } else if (child.userData.isBody) {
                 if (Array.isArray(child.material)) {
-                    const bodyTex = easterEggMode ? null : robotBodyTexture;
                     child.material[4].map = bodyTex;
                     child.material[4].needsUpdate = true;
                 }
             }
         });
     });
+}
+
+/**
+ * Resets existing targets in-place instead of recreating them.
+ * This prevents massive GC spikes when restarting the game.
+ */
+export function resetTargets() {
+    // If targets haven't been created yet, do full setup
+    if (targets.length === 0) {
+        setupTargets();
+        return;
+    }
+
+    targets.forEach((wrapper, i) => {
+        const pos = initialPositions[i];
+        if (!pos) return;
+
+        // Reset transform
+        wrapper.position.set(pos.x, pos.y, pos.z);
+        wrapper.rotation.set(0, pos.rotY || 0, 0, 'YXZ');
+        wrapper.scale.set(1, 1, 1);
+        wrapper.visible = true;
+
+        // Reset state
+        wrapper.userData.hp = 100;
+        wrapper.userData.isFalling = false;
+        wrapper.userData.fallAngle = 0;
+
+        // Reset HP bar
+        if (wrapper.userData.hpBar) {
+            wrapper.userData.hpBar.scale.y = 1;
+            wrapper.userData.hpBar.position.y = 0.585;
+            wrapper.userData.hpBar.material.color.setHex(0x00ff00);
+            wrapper.userData.hpBar.visible = true;
+        }
+        if (wrapper.userData.hpBarBg) {
+            wrapper.userData.hpBarBg.visible = true;
+        }
+    });
+
+    // Ensure textures are correct for the current mode
+    applyTextureMode();
 }
 
 export function setupTargets() {

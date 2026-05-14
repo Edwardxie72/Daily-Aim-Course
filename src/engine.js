@@ -74,10 +74,23 @@ export async function initEngine() {
 
     // ── Step 5: Full warm render — uploads geometry VBOs and any remaining ────
     //           textures, so the first gameplay frame costs nothing
-    setLoadingProgress(90, 'Final warmup...');
+    setLoadingProgress(85, 'Final warmup...');
     renderer.render(scene, camera);
 
-    // ── Step 6: Start RAF loop, then reveal main menu ─────────────────────────
+    // ── Step 6: JIT Burn-in ──────────────────────────────────────────────────
+    // Run hot loop functions for 60 frames to trigger V8 optimization
+    setLoadingProgress(95, 'Optimizing engine...');
+    for (let i = 0; i < 60; i++) {
+        const dummyDelta = 1/60;
+        updatePlayer(dummyDelta);
+        updateTargets(dummyDelta);
+        updateWeapon(dummyDelta, false);
+        updateCameraRotation();
+        updateHUD();
+        // Skip actual render call inside loop to save time, compile already did the work
+    }
+
+    // ── Step 7: Start RAF loop, then reveal main menu ─────────────────────────
     renderer.setAnimationLoop(animate);
 
     setLoadingProgress(100, 'Ready!');
