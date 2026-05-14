@@ -35,7 +35,11 @@ export const texturesReady = Promise.all([
     easterEggFaces          = [face1, face2, face3];
     easterEggRareTexture    = egg;
     // Set color spaces
-    [head, body, face1, face2, face3, egg].forEach(t => { t.colorSpace = THREE.SRGBColorSpace; });
+    [head, body, face1, face2, face3, egg].forEach(t => { if (t) t.colorSpace = THREE.SRGBColorSpace; });
+}).catch(err => {
+    console.warn('One or more textures failed to load, proceeding with placeholders:', err);
+    // Ensure the promise resolves so engine.js doesn't hang
+    return Promise.resolve();
 });
 
 

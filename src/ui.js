@@ -194,13 +194,17 @@ export function updateHUD() {
     if (now - _hudLastUpdate < 50) return;
     _hudLastUpdate = now;
 
-    if (gameStatus.running) {
+    if (gameStatus.running && _hudTimer) {
         const totalElapsed = (now - gameStatus.startTime) / 1000;
         _hudTimer.innerText = totalElapsed.toFixed(2) + 's';
     }
 
-    _hudTargetCount.innerText = `Targets: ${gameStatus.totalTargets - gameStatus.targetsLeft}/${gameStatus.totalTargets}`;
+    if (_hudTargetCount) {
+        _hudTargetCount.innerText = `Targets: ${gameStatus.totalTargets - gameStatus.targetsLeft}/${gameStatus.totalTargets}`;
+    }
 
     const ammo = getAmmoInfo();
-    _hudAmmo.innerText = ammo.isReloading ? 'RELOADING...' : `${ammo.current} / ${ammo.reserve}`;
+    if (_hudAmmo) {
+        _hudAmmo.innerText = ammo.isReloading ? 'RELOADING...' : `${ammo.current} / ${ammo.reserve}`;
+    }
 }
