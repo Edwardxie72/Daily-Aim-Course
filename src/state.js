@@ -11,9 +11,12 @@ scene.add(camera);
 
 // Camera rotation state — stored here so any module can reset without circular deps
 export const cameraAngle = { pitch: 0, yaw: 0 };
+// Reusable Euler — allocated once so applyCameraRotation() never triggers GC
+const _cameraEuler = new THREE.Euler(0, 0, 0, 'YXZ');
 export function applyCameraRotation() {
-    const euler = new THREE.Euler(cameraAngle.pitch, cameraAngle.yaw, 0, 'YXZ');
-    camera.quaternion.setFromEuler(euler);
+    _cameraEuler.x = cameraAngle.pitch;
+    _cameraEuler.y = cameraAngle.yaw;
+    camera.quaternion.setFromEuler(_cameraEuler);
 }
 
 export const renderer = new THREE.WebGLRenderer({ antialias: true });

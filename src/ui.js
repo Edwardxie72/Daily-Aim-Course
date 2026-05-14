@@ -172,31 +172,35 @@ function renderKeybinds() {
     }
 }
 
-let timerInterval = null;
-export function setupHUDLoop() {
-    if (timerInterval) clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-        updateHUD();
-    }, 10);
-}
+// Cached HUD element refs — queried once, never inside the RAF loop
+let _hudTimer = null;
+let _hudTargetCount = null;
+let _hudAmmo = null;
+let _hudLastUpdate = 0;
 
-function updateHUD() {
-    const timerDiv = document.getElementById('timer');
-    const targetCountDiv = document.getElementById('target-count');
-    const ammoDiv = document.getElementById('ammo-display');
+// HUD is driven by the RAF loop in engine.js — no separate setInterval needed
+export function setupHUDLoop() {}
+
+export function updateHUD() {
+    // Lazily cache refs after DOM is ready
+    if (!_hudTimer) {
+        _hudTimer       = document.getElementById('timer');
+        _hudTargetCount = document.getElementById('target-count');
+        _hudAmmo        = document.getElementById('ammo-display');
+    }
+
+    // Throttle DOM writes to ~20Hz — no need to update text 60x per second
+    const now = performance.now();
+    if (now - _hudLastUpdate < 50) return;
+    _hudLastUpdate = now;
 
     if (gameStatus.running) {
-        const now = performance.now();
         const totalElapsed = (now - gameStatus.startTime) / 1000;
-        timerDiv.innerText = totalElapsed.toFixed(2) + 's';
+        _hudTimer.innerText = totalElapsed.toFixed(2) + 's';
     }
 
-    targetCountDiv.innerText = `Targets: ${gameStatus.totalTargets - gameStatus.targetsLeft}/${gameStatus.totalTargets}`;
+    _hudTargetCount.innerText = `Targets: ${gameStatus.totalTargets - gameStatus.targetsLeft}/${gameStatus.totalTargets}`;
 
     const ammo = getAmmoInfo();
-    if (ammo.isReloading) {
-        ammoDiv.innerText = "RELOADING...";
-    } else {
-        ammoDiv.innerText = `${ammo.current} / ${ammo.reserve}`;
-    }
+    _hudAmmo.innerText = ammo.isReloading ? 'RELOADING...' : `${ammo.current} / ${ammo.reserve}`;
 }

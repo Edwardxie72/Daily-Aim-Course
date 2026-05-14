@@ -16,6 +16,11 @@ let isGrounded = false;
 let currentHeight = 1.37;
 let tuckAmount = 0;
 
+// Reusable objects to avoid per-frame allocations (GC pressure)
+const _euler = new THREE.Euler();
+const _up = new THREE.Vector3(0, 1, 0);
+const _moveDir = new THREE.Vector3();
+
 export function setupPlayer(scene, camera) {
     if (camera) _camera = camera;
     playerPosition.set(0, 0, 0);
@@ -47,8 +52,9 @@ export function updatePlayer(delta) {
     direction.x = Number(inputState.right) - Number(inputState.left);
     direction.normalize();
 
-    const camYaw = new THREE.Euler().setFromQuaternion(_camera.quaternion, 'YXZ').y;
-    const moveDir = new THREE.Vector3(direction.x, 0, direction.z).applyAxisAngle(new THREE.Vector3(0, 1, 0), camYaw);
+    const camYaw = _euler.setFromQuaternion(_camera.quaternion, 'YXZ').y;
+    _moveDir.set(direction.x, 0, direction.z).applyAxisAngle(_up, camYaw);
+    const moveDir = _moveDir;
 
     const nextX = playerPosition.x + moveDir.x * moveSpeed;
     const nextZ = playerPosition.z + moveDir.z * moveSpeed;

@@ -21,6 +21,7 @@ export function showMainMenu() {
 }
 
 export function showReadyScreen() {
+    resetLevel(); // Always reset targets, player, ammo when going to ready screen
     document.getElementById('main-menu').style.display = 'none';
     document.getElementById('pause-menu').style.display = 'none';
     document.getElementById('results-overlay').style.display = 'none';

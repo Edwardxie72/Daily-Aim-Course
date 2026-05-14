@@ -5,7 +5,14 @@ import { playHeadshot, playBodyHit, playWallHit, playTargetFall, resumeAudio } f
 
 export let targets = [];
 const raycaster = new THREE.Raycaster();
+const _raycastOrigin = new THREE.Vector2(); // Reused per shot — no per-shot object literal
 const textureLoader = new THREE.TextureLoader();
+
+
+// Pooled objects — allocated once, reused for every bullet hole
+const _bulletHoleGeo = new THREE.CircleGeometry(0.04, 8);
+const _bulletHoleMat = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+const _dummy = new THREE.Object3D();
 
 // Default robot textures
 const robotHeadTexture = textureLoader.load('./target_head.png');
@@ -158,12 +165,21 @@ export function setupTargets() {
     });
 }
 
+// Reusable array for raycaster — avoids new allocations on every shot
+const _raycastTargets = [];
+
 export function shootTarget(spread = 0) {
-    const randomX = (Math.random() - 0.5) * spread;
-    const randomY = (Math.random() - 0.5) * spread;
-    raycaster.setFromCamera({ x: randomX, y: randomY }, camera);
-    const activeTargets = targets.filter(t => !t.userData.isFalling);
-    const intersects = raycaster.intersectObjects([...activeTargets, ...levelMeshes], true);
+    _raycastOrigin.set((Math.random() - 0.5) * spread, (Math.random() - 0.5) * spread);
+    raycaster.setFromCamera(_raycastOrigin, camera);
+
+    // Fill reusable array instead of spreading two arrays into a new one
+    _raycastTargets.length = 0;
+    for (let i = 0; i < targets.length; i++) {
+        if (!targets[i].userData.isFalling) _raycastTargets.push(targets[i]);
+    }
+    for (let i = 0; i < levelMeshes.length; i++) _raycastTargets.push(levelMeshes[i]);
+
+    const intersects = raycaster.intersectObjects(_raycastTargets, true);
 
     if (intersects.length > 0) {
         const hit = intersects[0];
@@ -195,9 +211,9 @@ export function shootTarget(spread = 0) {
             playTargetFall();
             decrementTargets();
             setTimeout(() => {
-                scene.remove(wrapper);
-                targets = targets.filter(t => t !== wrapper);
-            }, 2000);
+            scene.remove(wrapper);
+            targets = targets.filter(t => t !== wrapper);
+        }, 2000);
         } else {
             const ratio = wrapper.userData.hp / 100;
             wrapper.userData.hpBar.scale.y = ratio;
@@ -220,17 +236,15 @@ export function getTotalTargets() { return initialPositions.length; }
 
 function createBulletHole(hit) {
     playWallHit();
-    const hole = new THREE.Mesh(
-        new THREE.CircleGeometry(0.04, 16),
-        new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.8, side: THREE.DoubleSide })
-    );
+    // Reuse pooled geometry & material — no per-shot allocation
+    const hole = new THREE.Mesh(_bulletHoleGeo, _bulletHoleMat);
     
     hole.position.copy(hit.point).add(hit.normal.clone().multiplyScalar(0.01));
     
-    const dummy = new THREE.Object3D();
-    dummy.position.copy(hole.position);
-    dummy.lookAt(hole.position.clone().add(hit.normal));
-    hole.quaternion.copy(dummy.quaternion);
+    // Reuse _dummy to get the correct quaternion
+    _dummy.position.copy(hole.position);
+    _dummy.lookAt(hole.position.clone().add(hit.normal));
+    hole.quaternion.copy(_dummy.quaternion);
     
     scene.add(hole);
     

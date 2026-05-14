@@ -14,6 +14,7 @@ const RELOAD_TIME = 2.0; // Shortened slightly for better feel
 let fireTimer = 0;
 const FIRE_RATE = 0.1; 
 let shotsFired = 0;
+let kickbackZ = 0; // Visual kickback offset, decays each frame
 
 export function setupWeapon(camera) {
     if (weaponGroup) camera.remove(weaponGroup);
@@ -73,6 +74,12 @@ export function updateWeapon(delta, isFiring) {
             hasPlayedEmptyClick = false;
         }
         fireTimer = Math.max(0, fireTimer - delta);
+    }
+
+    // Smooth kickback recovery — runs every frame, no setTimeout needed
+    if (kickbackZ > 0) {
+        kickbackZ = Math.max(0, kickbackZ - delta * 1.5);
+        if (weaponGroup) weaponGroup.position.z = -0.6 + kickbackZ;
     }
 }
 
@@ -139,8 +146,7 @@ function fire() {
     
     applyRecoil(kickX * 0.015, kickY * 0.015);
 
-    weaponGroup.position.z += 0.06;
-    setTimeout(() => { if (weaponGroup) weaponGroup.position.z -= 0.06; }, 50);
+    kickbackZ = 0.06; // Drives smooth kickback via updateWeapon decay loop
 
     let spread = 0;
     if (shotsFired > 3) {
@@ -176,12 +182,19 @@ export function resetAmmo() {
     reserveAmmo = 90;
     isReloading = false;
     reloadTimer = 0;
+    kickbackZ = 0;
+    fireTimer = 0;
+    shotsFired = 0;
+    hasPlayedEmptyClick = false;
     if (magMesh) {
         magMesh.position.set(0, -0.2, 0.1);
         magMesh.rotation.x = Math.PI / 10;
         magMesh.visible = true;
     }
-    if (weaponGroup) weaponGroup.rotation.x = 0;
+    if (weaponGroup) {
+        weaponGroup.position.set(0.3, -0.4, -0.6);
+        weaponGroup.rotation.x = 0;
+    }
 }
 
 export function getAmmoInfo() {
