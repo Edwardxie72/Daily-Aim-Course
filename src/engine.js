@@ -2,11 +2,13 @@ import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { scene, camera, renderer, inputState } from './state.js';
 import { setupLevel } from './level.js';
 import { setupPlayer, updatePlayer } from './player.js';
+import { setupTargets, texturesReady, robotHeadTexture, robotBodyTexture, easterEggFaces, easterEggRareTexture } from './targets.js';
 import { updateTargets } from './targets.js';
 import { setupControls, updateCameraRotation } from './controls.js';
 import { setupWeapon, updateWeapon } from './weapon.js';
 import { setupUI, updateHUD } from './ui.js';
 import { initSFX } from './sfx.js';
+import { showMainMenu } from './gameLogic.js';
 
 window.addEventListener('resize', onWindowResize);
 function onWindowResize() {
@@ -17,23 +19,72 @@ function onWindowResize() {
 
 let lastTime = performance.now();
 
-export function initEngine() {
+// Loading screen helpers
+function setLoadingProgress(pct, label) {
+    const fill = document.getElementById('loading-bar-fill');
+    const sub  = document.getElementById('loading-sub');
+    if (fill) fill.style.width = pct + '%';
+    if (sub && label) sub.textContent = label;
+}
+
+function hideLoadingScreen() {
+    const el = document.getElementById('loading-screen');
+    if (!el) return;
+    el.classList.add('hidden');
+    // Remove from DOM after transition so it can't block clicks
+    setTimeout(() => { el.style.display = 'none'; }, 600);
+}
+
+export async function initEngine() {
     const container = document.getElementById('game-container');
     if (container) container.appendChild(renderer.domElement);
-    
+
+    // ── Step 1: Build the scene (level + targets + player + controls) ─────────
+    setLoadingProgress(10, 'Building level...');
     setupLevel(scene);
     setupPlayer(scene, camera);
     setupControls();
     setupUI();
-    
-    // Pre-warm renderer (compiles shaders and uploads level textures to GPU)
+    setupWeapon(camera);
+
+    // Put all targets into the scene now so their shaders get compiled below
+    setupTargets();
+
+    // ── Step 2: Wait for textures to decode + audio to pre-render ─────────────
+    setLoadingProgress(20, 'Loading textures & audio...');
+    await Promise.all([
+        texturesReady,
+        initSFX().catch(e => console.warn('SFX pre-render failed:', e)),
+    ]);
+
+    // ── Step 3: Upload every texture to the GPU ───────────────────────────────
+    setLoadingProgress(55, 'Uploading to GPU...');
+    const allTextures = [
+        robotHeadTexture, robotBodyTexture,
+        ...easterEggFaces,
+        easterEggRareTexture,
+    ].filter(Boolean);
+    for (const tex of allTextures) {
+        try { renderer.initTexture(tex); } catch (_) {}
+    }
+
+    // ── Step 4: Compile ALL shaders (level + target materials in one pass) ────
+    setLoadingProgress(75, 'Compiling shaders...');
     renderer.compile(scene, camera);
+
+    // ── Step 5: Full warm render — uploads geometry VBOs and any remaining ────
+    //           textures, so the first gameplay frame costs nothing
+    setLoadingProgress(90, 'Final warmup...');
     renderer.render(scene, camera);
 
-    // Pre-render all sounds to AudioBuffers in the background (eliminates GC spikes on shot)
-    initSFX().catch(e => console.warn('SFX pre-render failed:', e));
-
+    // ── Step 6: Start RAF loop, then reveal main menu ─────────────────────────
     renderer.setAnimationLoop(animate);
+
+    setLoadingProgress(100, 'Ready!');
+    // Brief pause so the 100% bar is visible, then transition out
+    await new Promise(r => setTimeout(r, 300));
+    hideLoadingScreen();
+    showMainMenu();
 }
 
 function animate() {

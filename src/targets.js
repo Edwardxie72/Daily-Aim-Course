@@ -8,33 +8,47 @@ const raycaster = new THREE.Raycaster();
 const _raycastOrigin = new THREE.Vector2(); // Reused per shot — no per-shot object literal
 const textureLoader = new THREE.TextureLoader();
 
-
-// Pooled objects — allocated once, reused for every bullet hole
-const _bulletHoleGeo = new THREE.CircleGeometry(0.04, 8);
-const _bulletHoleMat = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
-const _dummy = new THREE.Object3D();
+// Wrap each texture load in a Promise so engine.js can await full decode
+function loadTexture(url) {
+    return new Promise((resolve, reject) => {
+        textureLoader.load(url, resolve, undefined, reject);
+    });
+}
 
 // Default robot textures
-const robotHeadTexture = textureLoader.load('./target_head.png');
-robotHeadTexture.colorSpace = THREE.SRGBColorSpace;
-const robotBodyTexture = textureLoader.load('./target_body.png');
-robotBodyTexture.colorSpace = THREE.SRGBColorSpace;
-
+export let robotHeadTexture, robotBodyTexture;
 // Easter egg face textures (toggled by '0' key)
-const easterEggFaces = [
-    textureLoader.load('./face.png'),
-    textureLoader.load('./face2.png'),
-    textureLoader.load('./face3.png')
-];
-easterEggFaces.forEach(t => { t.colorSpace = THREE.SRGBColorSpace; });
-const easterEggRareTexture = textureLoader.load('./easter_egg.png');
-easterEggRareTexture.colorSpace = THREE.SRGBColorSpace;
+export let easterEggFaces = [];
+export let easterEggRareTexture;
+
+// All textures loaded and decoded — engine.js awaits this before compile+render
+export const texturesReady = Promise.all([
+    loadTexture('./target_head.png'),
+    loadTexture('./target_body.png'),
+    loadTexture('./face.png'),
+    loadTexture('./face2.png'),
+    loadTexture('./face3.png'),
+    loadTexture('./easter_egg.png'),
+]).then(([head, body, face1, face2, face3, egg]) => {
+    robotHeadTexture        = head;
+    robotBodyTexture        = body;
+    easterEggFaces          = [face1, face2, face3];
+    easterEggRareTexture    = egg;
+    // Set color spaces
+    [head, body, face1, face2, face3, egg].forEach(t => { t.colorSpace = THREE.SRGBColorSpace; });
+});
+
 
 export let easterEggMode = false;
 export function toggleEasterEgg() {
     easterEggMode = !easterEggMode;
     applyTextureMode();
 }
+
+// Pooled objects — allocated once, reused for every bullet hole
+const _bulletHoleGeo = new THREE.CircleGeometry(0.04, 8);
+const _bulletHoleMat = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+const _dummy = new THREE.Object3D();
 
 // Reuse Geometries and Materials for performance
 const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
@@ -43,6 +57,7 @@ const headGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.05);
 const hpBgGeometry = new THREE.PlaneGeometry(0.1, 1.17);
 const hpBgMaterial = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
 const hpFgMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
+
 
 const initialPositions = [
     // Room 1 (6 targets) - Face forward (z axis)

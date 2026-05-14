@@ -48,7 +48,8 @@ export function resetLevel() {
 }
 
 export function startGame() {
-    setupTargets();
+    // NOTE: setupTargets() is NOT called here — resetLevel() (called by showReadyScreen())
+    // already rebuilt the targets. Calling it again would waste CPU and cause a stall.
     const total = getTotalTargets();
     gameStatus.totalTargets = total;
     gameStatus.targetsLeft = total;
