@@ -9,7 +9,9 @@ const textureLoader = new THREE.TextureLoader();
 
 // Default robot textures
 const robotHeadTexture = textureLoader.load('./target_head.png');
+robotHeadTexture.colorSpace = THREE.SRGBColorSpace;
 const robotBodyTexture = textureLoader.load('./target_body.png');
+robotBodyTexture.colorSpace = THREE.SRGBColorSpace;
 
 // Easter egg face textures (toggled by '0' key)
 const easterEggFaces = [
@@ -17,7 +19,9 @@ const easterEggFaces = [
     textureLoader.load('./face2.png'),
     textureLoader.load('./face3.png')
 ];
+easterEggFaces.forEach(t => { t.colorSpace = THREE.SRGBColorSpace; });
 const easterEggRareTexture = textureLoader.load('./easter_egg.png');
+easterEggRareTexture.colorSpace = THREE.SRGBColorSpace;
 
 export let easterEggMode = false;
 export function toggleEasterEgg() {
