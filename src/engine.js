@@ -2,7 +2,7 @@ import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { scene, camera, renderer, inputState } from './state.js';
 import { setupLevel } from './level.js';
 import { setupPlayer, updatePlayer } from './player.js';
-import { setupTargets, texturesReady, robotHeadTexture, robotBodyTexture, easterEggFaces, easterEggRareTexture } from './targets.js';
+import { setupTargets, resetTargets, texturesReady, robotHeadTexture, robotBodyTexture, easterEggFaces, easterEggRareTexture, warmupEffects } from './targets.js';
 import { updateTargets } from './targets.js';
 import { setupControls, updateCameraRotation } from './controls.js';
 import { setupWeapon, updateWeapon } from './weapon.js';
@@ -99,12 +99,17 @@ export async function initEngine() {
         // ── Step 6: JIT Burn-in ──────────────────────────────────────────────────
         // Run hot loop functions for 60 frames to trigger V8 optimization
         setLoadingProgress(95, 'Optimizing engine...');
+        
+        // Warm up one-off effects like bullet holes
+        warmupEffects();
+
         for (let i = 0; i < 60; i++) {
             const dummyDelta = 1/60;
             try {
                 updatePlayer(dummyDelta);
                 updateTargets(dummyDelta);
-                updateWeapon(dummyDelta, false);
+                // Simulate firing (without audio) to warm up weapon/shoot logic
+                updateWeapon(dummyDelta, true, true);
                 updateCameraRotation();
                 updateHUD();
             } catch (e) {

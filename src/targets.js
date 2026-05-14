@@ -245,7 +245,7 @@ export function shootTarget(spread = 0) {
         const hit = intersects[0];
 
         if (levelMeshes.includes(hit.object)) {
-            createBulletHole(hit);
+            createBulletHole(hit, false);
             return;
         }
 
@@ -294,8 +294,22 @@ export function updateTargets(delta) {
 
 export function getTotalTargets() { return initialPositions.length; }
 
-function createBulletHole(hit) {
-    playWallHit();
+/**
+ * Triggers rendering-related effects (like bullet holes) once during loading.
+ * This ensures shaders and geometry are fully warmed up before the first shot.
+ */
+export function warmupEffects() {
+    // Create a dummy hit result
+    const dummyHit = {
+        point: new THREE.Vector3(0, 0, 0),
+        normal: new THREE.Vector3(0, 0, 1)
+    };
+    // Create and immediately remove to warm up the GPU
+    createBulletHole(dummyHit, true);
+}
+
+function createBulletHole(hit, isWarmup = false) {
+    if (!isWarmup) playWallHit();
     // Reuse pooled geometry & material — no per-shot allocation
     const hole = new THREE.Mesh(_bulletHoleGeo, _bulletHoleMat);
     

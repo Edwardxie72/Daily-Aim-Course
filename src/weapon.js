@@ -45,7 +45,7 @@ export function setupWeapon(camera) {
 
 let hasPlayedEmptyClick = false;
 
-export function updateWeapon(delta, isFiring) {
+export function updateWeapon(delta, isFiring, isWarmup = false) {
     if (isReloading) {
         reloadTimer -= delta;
         animateReload(delta);
@@ -58,8 +58,8 @@ export function updateWeapon(delta, isFiring) {
         if (currentMag > 0) {
             fireTimer -= delta;
             if (fireTimer <= 0) {
-                resumeAudio();
-                fire();
+                if (!isWarmup) resumeAudio();
+                fire(isWarmup);
                 fireTimer = FIRE_RATE;
             }
         } else if (!hasPlayedEmptyClick) {
@@ -114,8 +114,8 @@ function animateReload(delta) {
     }
 }
 
-function fire() {
-    playShot();
+function fire(isWarmup = false) {
+    if (!isWarmup) playShot();
     currentMag--;
     shotsFired++;
     
