@@ -1,7 +1,7 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { camera, inputState, gameStatus, keyBinds, settings, cameraAngle, applyCameraRotation } from './state.js';
 import { setupWeapon, startReload } from './weapon.js';
-import { shootTarget } from './targets.js';
+import { shootTarget, toggleEasterEgg } from './targets.js';
 import { startGame, pauseGame, showReadyScreen, showMainMenu, resetLevel } from './gameLogic.js';
 
 export function loadSettings() {
@@ -170,6 +170,12 @@ function onKeyDown(event) {
         if (document.exitPointerLock) document.exitPointerLock();
         return;
     }
+    // Easter egg toggle — not in keybinds
+    if (event.code === 'Digit0') {
+        toggleEasterEgg();
+        return;
+    }
+
     if (event.code === keyBinds.reload) startReload();
     event.preventDefault();
 

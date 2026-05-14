@@ -63,9 +63,12 @@ export function setupUI() {
     // ---- Pause menu buttons ----
     document.getElementById('pause-resume-btn').addEventListener('click', () => {
         document.getElementById('pause-menu').style.display = 'none';
-        document.body.requestPointerLock({ unadjustedMovement: true }).catch(() => {
-            document.body.requestPointerLock();
-        });
+        // Browser enforces a cooldown after pointer lock exits before it can be re-acquired
+        setTimeout(() => {
+            document.body.requestPointerLock({ unadjustedMovement: true }).catch(() => {
+                document.body.requestPointerLock();
+            });
+        }, 150);
     });
 
     document.getElementById('pause-restart-btn').addEventListener('click', () => {
