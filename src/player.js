@@ -65,9 +65,6 @@ export function updatePlayer(delta) {
     const nextX = playerPosition.x + moveDir.x * moveSpeed;
     const nextZ = playerPosition.z + moveDir.z * moveSpeed;
 
-    const nextX = playerPosition.x + moveDir.x * moveSpeed;
-    const nextZ = playerPosition.z + moveDir.z * moveSpeed;
-
     _checkPos.set(nextX, playerPosition.y + 0.01, playerPosition.z);
     if (!checkCollision(_checkPos, tuckAmount)) playerPosition.x = nextX;
     
