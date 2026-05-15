@@ -34,11 +34,11 @@ const DEFAULT_LAYOUT = [
 ];
 
 const BLANK_ARENA_LAYOUT = [
-    // Perimeter Walls for 100x100 Arena
-    { size: [1, 10, 100], pos: [-50, 5, 0], color: 0x333333 }, // Left
-    { size: [1, 10, 100], pos: [50, 5, 0], color: 0x333333 },  // Right
-    { size: [100, 10, 1], pos: [0, 5, 50], color: 0x333333 },  // Back
-    { size: [100, 10, 1], pos: [0, 5, -50], color: 0x333333 }  // Front
+    // Perimeter Walls for 60x60 Arena
+    { size: [1, 10, 60], pos: [-30, 5, 0], color: 0x333333 }, // Left
+    { size: [1, 10, 60], pos: [30, 5, 0], color: 0x333333 },  // Right
+    { size: [60, 10, 1], pos: [0, 5, 30], color: 0x333333 },  // Back
+    { size: [60, 10, 1], pos: [0, 5, -30], color: 0x333333 }  // Front
 ];
 
 export function setupLevel(scene, customData = null, isBlank = false) {
@@ -58,8 +58,8 @@ export function setupLevel(scene, customData = null, isBlank = false) {
 
     // Floor
     const isCustom = !!customData || isBlank;
-    const floorSize = isCustom ? 100 : 70;
-    const floorWidth = isCustom ? 100 : 20;
+    const floorSize = isCustom ? 60 : 70;
+    const floorWidth = isCustom ? 60 : 20;
     const floorZ = isCustom ? 0 : -25;
     
     const floor = new THREE.Mesh(

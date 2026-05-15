@@ -8,7 +8,6 @@ let editorActive = false;
 let currentTool = 'box'; 
 let ghostObject = null;
 
-// Isolate editor meshes from main game scene
 const editorGroup = new THREE.Group();
 scene.add(editorGroup);
 
@@ -30,7 +29,6 @@ export function setEditorActive(active, isBlank = false) {
     setEditorControlsActive(active);
     setWeaponVisible(!active); 
     
-    // Hide editor objects if not active
     editorGroup.visible = active;
     
     if (active) {
@@ -50,12 +48,12 @@ function clearLevel() {
     editorObjects.length = 0;
     playerSpawn = { x: 0, y: 0, z: 0, yaw: 0 };
     
-    // Perimeter Walls for 100x100 Arena
+    // Perimeter Walls for 60x60 Arena (3x3 grid)
     const walls = [
-        { size: [1, 10, 100], pos: [-50, 5, 0], color: 0x333333 }, // Left
-        { size: [1, 10, 100], pos: [50, 5, 0], color: 0x333333 },  // Right
-        { size: [100, 10, 1], pos: [0, 5, 50], color: 0x333333 },  // Back
-        { size: [100, 10, 1], pos: [0, 5, -50], color: 0x333333 }  // Front
+        { size: [1, 10, 60], pos: [-30, 5, 0], color: 0x333333 }, // Left
+        { size: [1, 10, 60], pos: [30, 5, 0], color: 0x333333 },  // Right
+        { size: [60, 10, 1], pos: [0, 5, 30], color: 0x333333 },  // Back
+        { size: [60, 10, 1], pos: [0, 5, -30], color: 0x333333 }  // Front
     ];
     
     walls.forEach(w => {
@@ -88,7 +86,6 @@ export function updateEditor() {
     if (!editorActive || !ghostObject) return;
     
     raycaster.setFromCamera(mouse, camera);
-    // Intersect floor + editor objects (excluding walls)
     const floor = scene.children.find(c => c.userData.isFloor);
     const snappableObjects = editorObjects.filter(obj => obj.userData.type !== 'wall');
     const intersects = raycaster.intersectObjects([floor, ...snappableObjects].filter(Boolean), true);
@@ -97,17 +94,22 @@ export function updateEditor() {
         const hit = intersects[0];
         let pos = hit.point.clone();
         
+        const w = ghostObject.geometry.parameters.width || 1;
+        const h = ghostObject.geometry.parameters.height || 1;
+        const d = ghostObject.geometry.parameters.depth || 1;
+
+        // Clamp to arena bounds (accounting for wall thickness of 1)
+        const limitX = 29.5 - (w / 2);
+        const limitZ = 29.5 - (d / 2);
+        
+        pos.x = Math.max(-limitX, Math.min(limitX, pos.x));
+        pos.z = Math.max(-limitZ, Math.min(limitZ, pos.z));
+
         // Snap to 0.5m grid
         pos.x = Math.round(pos.x * 2) / 2;
         pos.z = Math.round(pos.z * 2) / 2;
         
-        // Calculate Y based on the surface we hit
-        const height = ghostObject.geometry.parameters.height || 1;
-        // If we hit the floor, sit on top of it. If we hit another object, sit on top of that.
-        pos.y = hit.point.y + (height / 2);
-        
-        // Final snap for Y
-        pos.y = Math.round(pos.y * 2) / 2;
+        pos.y = Math.round((hit.point.y + h / 2) * 2) / 2;
         
         ghostObject.position.copy(pos);
     }
@@ -174,7 +176,8 @@ export function exportLevel() {
 
 export function stopTesting() {
     gameStatus.isTesting = false;
-    document.getElementById('editor-hud').style.display = 'block';
+    const hud = document.getElementById('editor-hud');
+    if (hud) hud.style.display = 'block';
     setEditorActive(true);
 }
 
