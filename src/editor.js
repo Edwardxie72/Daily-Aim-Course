@@ -21,20 +21,37 @@ const boxMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
 const wallMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
 const spawnMat = new THREE.MeshStandardMaterial({ color: 0x4444ff });
 
-export function setEditorActive(active) {
+export function setEditorActive(active, isBlank = false) {
     editorActive = active;
     setEditorControlsActive(active);
-    setWeaponVisible(!active); // Hide weapon in editor
+    setWeaponVisible(!active); 
     
     if (active) {
         document.exitPointerLock();
+        if (isBlank) clearLevel();
+        else loadCurrentIntoEditor();
+        
         createGhost();
-        // Move camera up a bit to see the scene better
         camera.position.set(0, 10, 10);
         camera.lookAt(0, 0, 0);
     } else {
         if (ghostObject) { scene.remove(ghostObject); ghostObject = null; }
     }
+}
+
+function clearLevel() {
+    editorObjects.forEach(obj => scene.remove(obj));
+    editorObjects.length = 0;
+    playerSpawn = { x: 0, y: 0, z: 0, yaw: 0 };
+    // Also need to clear the actual level meshes from the scene
+    setupLevel(scene, []); 
+    setupTargets([]);
+}
+
+function loadCurrentIntoEditor() {
+    // For now, remixing is just starting with the scene as it is.
+    // In a more advanced version, we'd convert levelMeshes/targets into editorObjects.
+    // For now, let's just clear so it's not confusing, or keep the default layout.
 }
 
 function createGhost() {
@@ -55,23 +72,17 @@ export function updateEditor() {
     if (!editorActive || !ghostObject) return;
     
     raycaster.setFromCamera(mouse, camera);
-    
-    // Intersect with anything collidable + the floor
     const floor = scene.children.find(c => c.geometry instanceof THREE.BoxGeometry && c.position.y === -0.5);
     const intersects = raycaster.intersectObjects([floor, ...editorObjects].filter(Boolean), true);
     
     if (intersects.length > 0) {
         const hit = intersects[0];
         let pos = hit.point.clone();
-        
-        // Snap to 0.5m grid
         pos.x = Math.round(pos.x * 2) / 2;
         pos.z = Math.round(pos.z * 2) / 2;
         
-        // Calculate Y based on the surface we hit
-        const halfHeight = ghostObject.geometry.parameters.height / 2;
-        pos.y = hit.point.y + halfHeight;
-        pos.y = Math.round(pos.y * 2) / 2;
+        const height = ghostObject.geometry.parameters.height || 1;
+        pos.y = Math.round((hit.point.y + height / 2) * 2) / 2;
         
         ghostObject.position.copy(pos);
     }
@@ -100,14 +111,14 @@ export function placeObject() {
             scene.remove(oldSpawn);
             editorObjects.splice(editorObjects.indexOf(oldSpawn), 1);
         }
-        playerSpawn = { x: newObj.position.x, y: newObj.position.y - 1, z: newObj.position.z, yaw: 0 };
+        playerSpawn = { x: newObj.position.x, y: newObj.position.y - 1, z: newObj.position.z, yaw: newObj.rotation.y };
     }
     
     scene.add(newObj);
     editorObjects.push(newObj);
 }
 
-export function exportLevel() {
+export function getSerializedData() {
     const data = {
         spawn: playerSpawn,
         blocks: [],
@@ -129,10 +140,34 @@ export function exportLevel() {
             });
         }
     });
-    
-    const code = btoa(JSON.stringify(data));
-    return code;
+    return data;
 }
+
+export function exportLevel() {
+    return btoa(JSON.stringify(getSerializedData()));
+}
+
+function selectTool(tool) {
+    currentTool = tool;
+    const tools = document.querySelectorAll('.editor-tool');
+    tools.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tool === tool);
+    });
+    createGhost();
+}
+
+window.addEventListener('keydown', (e) => {
+    if (!editorActive) return;
+    
+    if (e.code === 'Digit1') selectTool('box');
+    if (e.code === 'Digit2') selectTool('wall');
+    if (e.code === 'Digit3') selectTool('target');
+    if (e.code === 'Digit4') selectTool('spawn');
+    
+    if (e.code === 'KeyR' && ghostObject) {
+        ghostObject.rotation.y += Math.PI / 4; // Rotate 45 degrees
+    }
+});
 
 window.addEventListener('mousemove', (e) => {
     mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -152,12 +187,7 @@ function isOverUI(e) {
 document.addEventListener('DOMContentLoaded', () => {
     const tools = document.querySelectorAll('.editor-tool');
     tools.forEach(t => {
-        t.addEventListener('click', () => {
-            tools.forEach(btn => btn.classList.remove('active'));
-            t.classList.add('active');
-            currentTool = t.dataset.tool;
-            createGhost();
-        });
+        t.addEventListener('click', () => selectTool(t.dataset.tool));
     });
     
     document.getElementById('editor-export').addEventListener('click', () => {

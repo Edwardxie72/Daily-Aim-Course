@@ -4,7 +4,7 @@ import { resetAmmo } from './weapon.js';
 import { fetchLeaderboard, updateLeaderboardUI } from './leaderboard.js';
 import { setupPlayer } from './player.js';
 import { setupLevel } from './level.js';
-import { setEditorActive } from './editor.js';
+import { setEditorActive, getSerializedData } from './editor.js';
 
 function setLeaderboard(visible) {
     const el = document.getElementById('leaderboard-panel');
@@ -96,12 +96,10 @@ export function decrementTargets() {
         const submitPanel = document.getElementById('submit-panel');
         
         resultsOverlay.style.display = 'flex';
-        submitPanel.style.display = 'block';
-
-        const shareText = `I finished the Daily Aim Course in ${finalTime.toFixed(2)}s!`;
+        // Only show leaderboard submission for the Daily Level
+        submitPanel.style.display = gameStatus.customLevel ? 'none' : 'block';
 
         fetchLeaderboard().then(data => {
-            // Simple rank calculation
             let rank = 1;
             for (const entry of data) {
                 if (finalTime < entry.time) break;
@@ -110,32 +108,21 @@ export function decrementTargets() {
             
             let title = "Course Clear!";
             let titleColor = "#4ade80";
-            if (rank === 1) { title = "🏆 World Record!"; titleColor = "#ffd700"; }
-            else if (rank <= 3) { title = "🥈 Podium Finish!"; titleColor = "#c0c0c0"; }
+            if (rank === 1 && !gameStatus.customLevel) { title = "🏆 World Record!"; titleColor = "#ffd700"; }
 
             updateLeaderboardUI(data, finalTime, rank);
 
             completionMsg.innerHTML = `
                 <div style="background: rgba(10,10,15,0.95); padding: 36px 44px; border-radius: 14px; border: 1px solid #333; box-shadow: 0 20px 60px rgba(0,0,0,0.8); text-align: center;">
-                    <h1 style="margin-top: 0; color: ${titleColor}; font-size: 1.6rem;">${title}</h1>
+                    <h1 style="margin-top: 0; color: ${titleColor}; font-size: 1.6rem;">${gameStatus.customLevel ? 'Custom Course Clear!' : title}</h1>
                     <p style="font-size: 2rem; margin: 0 0 6px 0; color: white; font-weight: 700;">${finalTime.toFixed(2)}s</p>
-                    <p style="font-size: 0.9rem; color: #666; margin: 0 0 24px 0;">Rank #${rank}</p>
+                    <p style="font-size: 0.9rem; color: #666; margin: 0 0 24px 0;">Time</p>
                     <div style="display: flex; gap: 10px; justify-content: center;">
-                        <button id="copy-btn" style="background: #1a1a22; color: white; border: 1px solid #444; padding: 9px 18px; border-radius: 6px; cursor: pointer;">Share</button>
                         <button id="play-again-btn" style="background: #1a1a22; color: white; border: 1px solid #4ade80; padding: 9px 18px; border-radius: 6px; cursor: pointer;">↺ Play Again</button>
                         <button id="back-to-menu-btn" style="background: #4ade80; color: #0a0a0a; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600;">Main Menu</button>
                     </div>
                 </div>
             `;
-
-            document.getElementById('copy-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                navigator.clipboard.writeText(shareText).then(() => {
-                    const btn = document.getElementById('copy-btn');
-                    btn.innerText = "Copied!";
-                    setTimeout(() => { btn.innerText = "Share"; }, 2000);
-                });
-            });
 
             document.getElementById('play-again-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -173,9 +160,31 @@ export function initUIEventListeners() {
     if (editorBtn) {
         editorBtn.onclick = () => {
             hideAllMenus();
-            const hud = document.getElementById('editor-hud');
-            if (hud) hud.style.display = 'block';
-            setEditorActive(true);
+            document.getElementById('editor-hud').style.display = 'block';
+            setEditorActive(true, false); // Remix mode
+        };
+    }
+
+    const editorBlankBtn = document.getElementById('launch-editor-blank-btn');
+    if (editorBlankBtn) {
+        editorBlankBtn.onclick = () => {
+            hideAllMenus();
+            document.getElementById('editor-hud').style.display = 'block';
+            setEditorActive(true, true); // Blank mode
+        };
+    }
+    
+    const testBtn = document.getElementById('editor-test');
+    if (testBtn) {
+        testBtn.onclick = () => {
+            const data = getSerializedData();
+            if (data.targets.length === 0) {
+                alert("Add at least one target before testing!");
+                return;
+            }
+            gameStatus.customLevel = data;
+            setEditorActive(false);
+            showReadyScreen();
         };
     }
     

@@ -92,9 +92,10 @@
                 <h1>Custom Game</h1>
                 <p class="subtitle">Play a shared course or create your own</p>
 
-                <div class="menu-buttons">
+                <div class="menu-buttons" style="flex-direction: column; gap: 10px;">
                     <button id="import-code-btn" class="big-btn">📥 Play from Code</button>
-                    <button id="launch-editor-btn" class="big-btn secondary-btn">🛠 Level Editor</button>
+                    <button id="launch-editor-btn" class="big-btn secondary-btn">🛠 Remix Daily Level</button>
+                    <button id="launch-editor-blank-btn" class="big-btn secondary-btn">📄 Create Blank Level</button>
                 </div>
 
                 <div class="settings">
@@ -133,17 +134,17 @@
         <!-- ======================== LEVEL EDITOR HUD ======================== -->
         <div id="editor-hud" style="display: none;">
             <div id="editor-toolbar">
-                <button class="editor-tool active" data-tool="box">📦 Box</button>
-                <button class="editor-tool" data-tool="wall">🧱 Wall</button>
-                <button class="editor-tool" data-tool="target">🎯 Target</button>
-                <button class="editor-tool" data-tool="spawn">🚩 Spawn</button>
+                <button class="editor-tool active" data-tool="box">📦 Box [1]</button>
+                <button class="editor-tool" data-tool="wall">🧱 Wall [2]</button>
+                <button class="editor-tool" data-tool="target">🎯 Target [3]</button>
+                <button class="editor-tool" data-tool="spawn">🚩 Spawn [4]</button>
                 <div class="divider"></div>
                 <button id="editor-undo">↩ Undo</button>
                 <button id="editor-redo">↪ Redo</button>
                 <div class="divider"></div>
-                <button id="editor-test" class="accent-btn">🎮 Test Level</button>
-                <button id="editor-export">💾 Export Code</button>
-                <button id="editor-import">📂 Import Code</button>
+                <button id="editor-test" class="accent-btn">🎮 Test [T]</button>
+                <button id="editor-export">💾 Export</button>
+                <button id="editor-import">📂 Import</button>
                 <button id="editor-exit" class="danger-btn">✖ Exit</button>
             </div>
             <div id="editor-selection-panel" style="display: none;">
