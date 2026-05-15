@@ -141,14 +141,17 @@ function animate() {
     const delta = Math.min((time - lastTime) / 1000, 0.1);
     lastTime = time;
 
-    updatePlayer(delta);
-    updateTargets(delta);
-    updateWeapon(delta, inputState.shoot);
-    updateCameraRotation();
+    // Only update gameplay systems if editor is NOT active
+    if (document.getElementById('editor-hud').style.display === 'block') {
+        updateEditor();
+        updateEditorControls(delta);
+    } else {
+        updatePlayer(delta);
+        updateTargets(delta);
+        updateWeapon(delta, inputState.shoot);
+        updateCameraRotation();
+    }
+    
     updateHUD();
-
-    updateEditor();
-    updateEditorControls(delta);
-
     renderer.render(scene, camera);
 }

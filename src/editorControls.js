@@ -1,11 +1,18 @@
-import { camera } from './state.js';
+import { THREE, camera } from './state.js';
 
 let active = false;
-const speed = 10;
+const speed = 15;
 const keys = {};
+const mouseSpeed = 0.003;
+
+let rotation = { x: 0, y: 0 };
 
 export function setEditorControlsActive(isActive) {
     active = isActive;
+    if (isActive) {
+        rotation.x = camera.rotation.x;
+        rotation.y = camera.rotation.y;
+    }
 }
 
 window.addEventListener('keydown', (e) => { keys[e.code] = true; });
@@ -16,10 +23,9 @@ export function updateEditorControls(delta) {
 
     const moveSpeed = speed * delta;
     
-    // Simple flying controls
     const forward = new THREE.Vector3();
     camera.getWorldDirection(forward);
-    forward.y = 0; // Keep movement horizontal for WASD
+    forward.y = 0; 
     forward.normalize();
     
     const right = new THREE.Vector3().crossVectors(camera.up, forward).negate();
@@ -33,14 +39,9 @@ export function updateEditorControls(delta) {
     if (keys['ShiftLeft']) camera.position.y -= moveSpeed;
 }
 
-// Mouse rotation (standard orbit/pan or simple FPS-style look)
-// For simplicity, we'll use the existing pointer lock look if engaged, 
-// or implement a simple right-click drag to look.
 let isDragging = false;
-let previousMouse = { x: 0, y: 0 };
-
 window.addEventListener('mousedown', (e) => {
-    if (e.button === 2) isDragging = true;
+    if (active && e.button === 2) isDragging = true;
 });
 
 window.addEventListener('mouseup', (e) => {
@@ -50,12 +51,15 @@ window.addEventListener('mouseup', (e) => {
 window.addEventListener('mousemove', (e) => {
     if (!active || !isDragging) return;
     
-    const dx = e.clientX - previousMouse.x;
-    const dy = e.clientY - previousMouse.y;
+    rotation.y -= e.movementX * mouseSpeed;
+    rotation.x -= e.movementY * mouseSpeed;
+    rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotation.x));
     
-    // Update camera rotation based on dx, dy
-    // ... logic for camera rotation (euler angles)
-    
-    previousMouse.x = e.clientX;
-    previousMouse.y = e.clientY;
+    camera.rotation.order = 'YXZ';
+    camera.rotation.set(rotation.x, rotation.y, 0);
+});
+
+// Prevent context menu on right click in editor
+window.addEventListener('contextmenu', (e) => {
+    if (active) e.preventDefault();
 });

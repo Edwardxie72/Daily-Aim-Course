@@ -2,10 +2,10 @@ import { THREE, scene, camera } from './state.js';
 import { setupLevel } from './level.js';
 import { setupTargets } from './targets.js';
 import { setEditorControlsActive } from './editorControls.js';
+import { setWeaponVisible } from './weapon.js';
 
 let editorActive = false;
-let selectedObject = null;
-let currentTool = 'box'; // 'box', 'wall', 'target', 'spawn'
+let currentTool = 'box'; 
 let ghostObject = null;
 
 const editorObjects = [];
@@ -24,9 +24,14 @@ const spawnMat = new THREE.MeshStandardMaterial({ color: 0x4444ff });
 export function setEditorActive(active) {
     editorActive = active;
     setEditorControlsActive(active);
+    setWeaponVisible(!active); // Hide weapon in editor
+    
     if (active) {
         document.exitPointerLock();
         createGhost();
+        // Move camera up a bit to see the scene better
+        camera.position.set(0, 10, 10);
+        camera.lookAt(0, 0, 0);
     } else {
         if (ghostObject) { scene.remove(ghostObject); ghostObject = null; }
     }
@@ -47,31 +52,28 @@ function createGhost() {
 }
 
 export function updateEditor() {
-    if (!editorActive) return;
+    if (!editorActive || !ghostObject) return;
     
-    // Update mouse coords (this should be handled by a global mousemove listener)
-    // For now, let's assume it's updated.
+    raycaster.setFromCamera(mouse, camera);
     
-    if (ghostObject) {
-        raycaster.setFromCamera(mouse, camera);
-        // Intersect floor only for placement
-        const floor = scene.children.find(c => c.geometry instanceof THREE.BoxGeometry && c.position.y === -0.5);
-        const intersects = raycaster.intersectObject(floor);
+    // Intersect with anything collidable + the floor
+    const floor = scene.children.find(c => c.geometry instanceof THREE.BoxGeometry && c.position.y === -0.5);
+    const intersects = raycaster.intersectObjects([floor, ...editorObjects].filter(Boolean), true);
+    
+    if (intersects.length > 0) {
+        const hit = intersects[0];
+        let pos = hit.point.clone();
         
-        if (intersects.length > 0) {
-            const hit = intersects[0];
-            let pos = hit.point.clone();
-            
-            // Snap to 0.5m grid
-            pos.x = Math.round(pos.x * 2) / 2;
-            pos.z = Math.round(pos.z * 2) / 2;
-            
-            // Y position based on object height so it sits on floor
-            const height = ghostObject.geometry.parameters.height || 1;
-            pos.y = height / 2;
-            
-            ghostObject.position.copy(pos);
-        }
+        // Snap to 0.5m grid
+        pos.x = Math.round(pos.x * 2) / 2;
+        pos.z = Math.round(pos.z * 2) / 2;
+        
+        // Calculate Y based on the surface we hit
+        const halfHeight = ghostObject.geometry.parameters.height / 2;
+        pos.y = hit.point.y + halfHeight;
+        pos.y = Math.round(pos.y * 2) / 2;
+        
+        ghostObject.position.copy(pos);
     }
 }
 
@@ -93,7 +95,6 @@ export function placeObject() {
     newObj.userData.isSpawn = (currentTool === 'spawn');
     
     if (newObj.userData.isSpawn) {
-        // Only one spawn allowed
         const oldSpawn = editorObjects.find(o => o.userData.isSpawn);
         if (oldSpawn) {
             scene.remove(oldSpawn);
@@ -130,11 +131,9 @@ export function exportLevel() {
     });
     
     const code = btoa(JSON.stringify(data));
-    console.log("Exported Code:", code);
     return code;
 }
 
-// Global mouse listener for the editor
 window.addEventListener('mousemove', (e) => {
     mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -150,7 +149,6 @@ function isOverUI(e) {
     return e.target.closest('#editor-toolbar') || e.target.closest('#editor-selection-panel');
 }
 
-// Event delegation for tools
 document.addEventListener('DOMContentLoaded', () => {
     const tools = document.querySelectorAll('.editor-tool');
     tools.forEach(t => {
@@ -164,10 +162,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('editor-export').addEventListener('click', () => {
         const code = exportLevel();
-        prompt("Copy this level code:", code);
+        const input = document.createElement('textarea');
+        input.value = code;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        alert("Level code copied to clipboard!");
     });
     
     document.getElementById('editor-exit').addEventListener('click', () => {
-        location.reload(); // Simplest way to reset everything for now
+        location.reload(); 
     });
 });

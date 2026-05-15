@@ -43,6 +43,10 @@ export function setupWeapon(camera) {
     camera.add(weaponGroup);
 }
 
+export function setWeaponVisible(visible) {
+    if (weaponGroup) weaponGroup.visible = visible;
+}
+
 let hasPlayedEmptyClick = false;
 
 export function updateWeapon(delta, isFiring, isWarmup = false) {
