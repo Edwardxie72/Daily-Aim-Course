@@ -5,6 +5,20 @@ import { shootTarget, toggleEasterEgg } from './targets.js';
 import { startGame, pauseGame, showReadyScreen, showMainMenu, resetLevel } from './gameLogic.js';
 import { stopTesting } from './editor.js';
 
+let isListeningForKey = false;
+export function setIsListeningForKey(val) { isListeningForKey = val; }
+
+export function getSens() { return settings.sensitivity; }
+export function setSens(val) { 
+    settings.sensitivity = val; 
+    localStorage.setItem('aimCourse_sens', val);
+}
+
+export function setKeyBind(action, key) {
+    keyBinds[action] = key;
+    localStorage.setItem('aimCourse_keyBinds', JSON.stringify(keyBinds));
+}
+
 export function loadSettings() {
     const savedSens = localStorage.getItem('aimCourse_sens');
     if (savedSens) settings.sensitivity = parseFloat(savedSens);
@@ -37,7 +51,6 @@ export function setupControls() {
         const resultsOverlay = document.getElementById('results-overlay');
 
         if (document.pointerLockElement === document.body) {
-            // Entering game — hide all menus
             readyScreen.style.display = 'none';
             if (pauseMenu) pauseMenu.style.display = 'none';
             if (leaderboardPanel) leaderboardPanel.style.display = 'none';
@@ -68,7 +81,6 @@ export function setupControls() {
         }
     });
 
-    // ESC from ready screen → go to main menu (or editor if testing)
     document.addEventListener('keydown', (e) => {
         if (e.code === 'Escape' && !document.pointerLockElement) {
             const readyScreen = document.getElementById('ready-screen');
@@ -83,6 +95,7 @@ export function setupControls() {
     });
 
     document.addEventListener('mousedown', (e) => {
+        if (isListeningForKey) return;
         if (document.pointerLockElement === document.body) {
             if (e.button === 0 && keyBinds.shoot === 'Mouse0') inputState.shoot = true;
         }
