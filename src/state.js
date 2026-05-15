@@ -42,7 +42,8 @@ export const gameStatus = {
     elapsedTime: 0,
     totalTargets: 5,
     targetsLeft: 5,
-    customLevel: null // Holds custom layout/target data if playing a shared code
+    customLevel: null,
+    isTesting: false // True if currently testing a level from the editor
 };
 
 export const settings = {

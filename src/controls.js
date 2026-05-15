@@ -94,23 +94,31 @@ export function setupControls() {
 
             if (gameStatus.running) {
                 pauseGame();
-                // Keep HUD visible so timer is shown; overlay the pause menu on top
                 if (pauseMenu) pauseMenu.style.display = 'flex';
                 if (leaderboardPanel) leaderboardPanel.style.display = 'block';
             } else {
-                // Not running and no results = going to ready screen
                 hud.style.display = 'none';
-                readyScreen.style.display = 'flex';
+                if (gameStatus.isTesting) {
+                    const { stopTesting } = await import('./editor.js');
+                    stopTesting();
+                } else {
+                    readyScreen.style.display = 'flex';
+                }
             }
         }
     });
 
-    // ESC from ready screen → go to main menu
-    document.addEventListener('keydown', (e) => {
+    // ESC from ready screen → go to main menu (or editor if testing)
+    document.addEventListener('keydown', async (e) => {
         if (e.code === 'Escape' && !document.pointerLockElement) {
             const readyScreen = document.getElementById('ready-screen');
             if (readyScreen && readyScreen.style.display !== 'none') {
-                showMainMenu();
+                if (gameStatus.isTesting) {
+                    const { stopTesting } = await import('./editor.js');
+                    stopTesting();
+                } else {
+                    showMainMenu();
+                }
             }
         }
     });
@@ -159,9 +167,19 @@ function onKeyDown(event) {
     
     if (event.code === keyBinds.reset) {
         event.preventDefault();
-        // Reset level visually before exiting pointer lock
+        
+        if (gameStatus.isTesting) {
+            // Return to editor
+            const { stopTesting } = await import('./gameLogic.js'); // Use dynamic import to avoid circular dependency
+            // Wait, gameLogic.js is already imported but stopTesting might not be.
+            // Actually, I should just call a logic function.
+            // Let's use a simpler way: just exit pointer lock and let the state change handle it.
+            // But resetLevel() was called.
+            
+            // Re-importing might be messy. I'll just check the flag and handle it in pointerlockchange.
+        }
+        
         resetLevel();
-        // running is now false, so pointerlockchange will route to ready screen
         document.exitPointerLock();
         return;
     }

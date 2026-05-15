@@ -64,3 +64,7 @@ export function setupLevel(scene, customData = null) {
         addStaticObject(mesh);
     });
 }
+
+export function setLevelVisibility(visible) {
+    levelMeshes.forEach(m => m.visible = visible);
+}

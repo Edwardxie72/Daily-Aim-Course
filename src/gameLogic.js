@@ -1,10 +1,10 @@
-import { setupTargets, resetTargets, getTotalTargets } from './targets.js';
+import { setupTargets, resetTargets, getTotalTargets, setTargetsVisibility } from './targets.js';
 import { gameStatus, camera, cameraAngle, applyCameraRotation, scene } from './state.js';
 import { resetAmmo } from './weapon.js';
 import { fetchLeaderboard, updateLeaderboardUI } from './leaderboard.js';
 import { setupPlayer } from './player.js';
-import { setupLevel } from './level.js';
-import { setEditorActive, getSerializedData } from './editor.js';
+import { setupLevel, setLevelVisibility } from './level.js';
+import { setEditorActive, getSerializedData, stopTesting } from './editor.js';
 
 function setLeaderboard(visible) {
     const el = document.getElementById('leaderboard-panel');
@@ -15,6 +15,12 @@ export function showMainMenu() {
     hideAllMenus();
     document.getElementById('main-menu').style.display = 'flex';
     setLeaderboard(true);
+    
+    // Ensure game level is visible and editor is hidden
+    setLevelVisibility(true);
+    setTargetsVisibility(true);
+    setEditorActive(false);
+    
     fetchLeaderboard().then(data => updateLeaderboardUI(data));
 }
 
@@ -40,8 +46,14 @@ function hideAllMenus() {
 }
 
 export function resetLevel() {
+    // If testing from editor, don't use the daily layout
     const blocks = gameStatus.customLevel ? gameStatus.customLevel.blocks : null;
     const targetData = gameStatus.customLevel ? gameStatus.customLevel.targets : null;
+    
+    // When playing a custom level, hide the daily level meshes
+    const isCustom = !!gameStatus.customLevel;
+    setLevelVisibility(!isCustom);
+    setTargetsVisibility(!isCustom);
     
     setupLevel(scene, blocks);
     setupTargets(targetData);
@@ -96,8 +108,7 @@ export function decrementTargets() {
         const submitPanel = document.getElementById('submit-panel');
         
         resultsOverlay.style.display = 'flex';
-        // Only show leaderboard submission for the Daily Level
-        submitPanel.style.display = gameStatus.customLevel ? 'none' : 'block';
+        submitPanel.style.display = (gameStatus.customLevel && !gameStatus.isTesting) ? 'none' : (gameStatus.isTesting ? 'none' : 'block');
 
         fetchLeaderboard().then(data => {
             let rank = 1;
@@ -112,6 +123,9 @@ export function decrementTargets() {
 
             updateLeaderboardUI(data, finalTime, rank);
 
+            const backText = gameStatus.isTesting ? 'Editor' : 'Main Menu';
+            const backFunc = gameStatus.isTesting ? 'stopTesting' : 'showMainMenu';
+
             completionMsg.innerHTML = `
                 <div style="background: rgba(10,10,15,0.95); padding: 36px 44px; border-radius: 14px; border: 1px solid #333; box-shadow: 0 20px 60px rgba(0,0,0,0.8); text-align: center;">
                     <h1 style="margin-top: 0; color: ${titleColor}; font-size: 1.6rem;">${gameStatus.customLevel ? 'Custom Course Clear!' : title}</h1>
@@ -119,7 +133,7 @@ export function decrementTargets() {
                     <p style="font-size: 0.9rem; color: #666; margin: 0 0 24px 0;">Time</p>
                     <div style="display: flex; gap: 10px; justify-content: center;">
                         <button id="play-again-btn" style="background: #1a1a22; color: white; border: 1px solid #4ade80; padding: 9px 18px; border-radius: 6px; cursor: pointer;">↺ Play Again</button>
-                        <button id="back-to-menu-btn" style="background: #4ade80; color: #0a0a0a; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600;">Main Menu</button>
+                        <button id="back-to-menu-btn" style="background: #4ade80; color: #0a0a0a; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-weight: 600;">${backText}</button>
                     </div>
                 </div>
             `;
@@ -131,7 +145,12 @@ export function decrementTargets() {
 
             document.getElementById('back-to-menu-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
-                showMainMenu();
+                if (gameStatus.isTesting) {
+                    hideAllMenus();
+                    stopTesting();
+                } else {
+                    showMainMenu();
+                }
             });
         });
     }
@@ -142,6 +161,7 @@ export function loadCustomLevel(code) {
         const json = atob(code);
         const data = JSON.parse(json);
         gameStatus.customLevel = data;
+        gameStatus.isTesting = false;
         showReadyScreen();
     } catch (e) {
         alert("Invalid level code!");
@@ -161,7 +181,9 @@ export function initUIEventListeners() {
         editorBtn.onclick = () => {
             hideAllMenus();
             document.getElementById('editor-hud').style.display = 'block';
-            setEditorActive(true, false); // Remix mode
+            setLevelVisibility(false);
+            setTargetsVisibility(false);
+            setEditorActive(true, false); 
         };
     }
 
@@ -170,7 +192,9 @@ export function initUIEventListeners() {
         editorBlankBtn.onclick = () => {
             hideAllMenus();
             document.getElementById('editor-hud').style.display = 'block';
-            setEditorActive(true, true); // Blank mode
+            setLevelVisibility(false);
+            setTargetsVisibility(false);
+            setEditorActive(true, true); 
         };
     }
     
@@ -183,6 +207,7 @@ export function initUIEventListeners() {
                 return;
             }
             gameStatus.customLevel = data;
+            gameStatus.isTesting = true;
             setEditorActive(false);
             showReadyScreen();
         };
@@ -200,6 +225,7 @@ export function initUIEventListeners() {
     if (dailyBtn) {
         dailyBtn.onclick = () => {
             gameStatus.customLevel = null;
+            gameStatus.isTesting = false;
             showReadyScreen();
         };
     }

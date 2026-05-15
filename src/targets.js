@@ -330,3 +330,7 @@ function createBulletHole(hit, isWarmup = false) {
         scene.remove(hole);
     }, 4000);
 }
+
+export function setTargetsVisibility(visible) {
+    targets.forEach(t => t.visible = visible);
+}

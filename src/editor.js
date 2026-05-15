@@ -1,4 +1,4 @@
-import { THREE, scene, camera } from './state.js';
+import { THREE, scene, camera, gameStatus } from './state.js';
 import { setupLevel } from './level.js';
 import { setupTargets } from './targets.js';
 import { setEditorControlsActive } from './editorControls.js';
@@ -7,6 +7,10 @@ import { setWeaponVisible } from './weapon.js';
 let editorActive = false;
 let currentTool = 'box'; 
 let ghostObject = null;
+
+// Isolate editor meshes from main game scene
+const editorGroup = new THREE.Group();
+scene.add(editorGroup);
 
 const editorObjects = [];
 let playerSpawn = { x: 0, y: 0, z: 0, yaw: 0 };
@@ -26,36 +30,29 @@ export function setEditorActive(active, isBlank = false) {
     setEditorControlsActive(active);
     setWeaponVisible(!active); 
     
+    // Hide editor objects if not active
+    editorGroup.visible = active;
+    
     if (active) {
         document.exitPointerLock();
         if (isBlank) clearLevel();
-        else loadCurrentIntoEditor();
         
         createGhost();
         camera.position.set(0, 10, 10);
         camera.lookAt(0, 0, 0);
     } else {
-        if (ghostObject) { scene.remove(ghostObject); ghostObject = null; }
+        if (ghostObject) { editorGroup.remove(ghostObject); ghostObject = null; }
     }
 }
 
 function clearLevel() {
-    editorObjects.forEach(obj => scene.remove(obj));
+    editorObjects.forEach(obj => editorGroup.remove(obj));
     editorObjects.length = 0;
     playerSpawn = { x: 0, y: 0, z: 0, yaw: 0 };
-    // Also need to clear the actual level meshes from the scene
-    setupLevel(scene, []); 
-    setupTargets([]);
-}
-
-function loadCurrentIntoEditor() {
-    // For now, remixing is just starting with the scene as it is.
-    // In a more advanced version, we'd convert levelMeshes/targets into editorObjects.
-    // For now, let's just clear so it's not confusing, or keep the default layout.
 }
 
 function createGhost() {
-    if (ghostObject) scene.remove(ghostObject);
+    if (ghostObject) editorGroup.remove(ghostObject);
     
     let geo;
     if (currentTool === 'box') geo = new THREE.BoxGeometry(2, 2, 2);
@@ -65,13 +62,14 @@ function createGhost() {
     
     ghostObject = new THREE.Mesh(geo, ghostMat);
     ghostObject.userData.isGhost = true;
-    scene.add(ghostObject);
+    editorGroup.add(ghostObject);
 }
 
 export function updateEditor() {
     if (!editorActive || !ghostObject) return;
     
     raycaster.setFromCamera(mouse, camera);
+    // Intersect floor + editor objects
     const floor = scene.children.find(c => c.geometry instanceof THREE.BoxGeometry && c.position.y === -0.5);
     const intersects = raycaster.intersectObjects([floor, ...editorObjects].filter(Boolean), true);
     
@@ -108,13 +106,13 @@ export function placeObject() {
     if (newObj.userData.isSpawn) {
         const oldSpawn = editorObjects.find(o => o.userData.isSpawn);
         if (oldSpawn) {
-            scene.remove(oldSpawn);
+            editorGroup.remove(oldSpawn);
             editorObjects.splice(editorObjects.indexOf(oldSpawn), 1);
         }
         playerSpawn = { x: newObj.position.x, y: newObj.position.y - 1, z: newObj.position.z, yaw: newObj.rotation.y };
     }
     
-    scene.add(newObj);
+    editorGroup.add(newObj);
     editorObjects.push(newObj);
 }
 
@@ -147,6 +145,12 @@ export function exportLevel() {
     return btoa(JSON.stringify(getSerializedData()));
 }
 
+export function stopTesting() {
+    gameStatus.isTesting = false;
+    document.getElementById('editor-hud').style.display = 'block';
+    setEditorActive(true);
+}
+
 function selectTool(tool) {
     currentTool = tool;
     const tools = document.querySelectorAll('.editor-tool');
@@ -165,7 +169,7 @@ window.addEventListener('keydown', (e) => {
     if (e.code === 'Digit4') selectTool('spawn');
     
     if (e.code === 'KeyR' && ghostObject) {
-        ghostObject.rotation.y += Math.PI / 4; // Rotate 45 degrees
+        ghostObject.rotation.y += Math.PI / 4; 
     }
 });
 
@@ -190,18 +194,24 @@ document.addEventListener('DOMContentLoaded', () => {
         t.addEventListener('click', () => selectTool(t.dataset.tool));
     });
     
-    document.getElementById('editor-export').addEventListener('click', () => {
-        const code = exportLevel();
-        const input = document.createElement('textarea');
-        input.value = code;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-        alert("Level code copied to clipboard!");
-    });
+    const exportBtn = document.getElementById('editor-export');
+    if (exportBtn) {
+        exportBtn.onclick = () => {
+            const code = exportLevel();
+            const input = document.createElement('textarea');
+            input.value = code;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            alert("Level code copied to clipboard!");
+        };
+    }
     
-    document.getElementById('editor-exit').addEventListener('click', () => {
-        location.reload(); 
-    });
+    const exitBtn = document.getElementById('editor-exit');
+    if (exitBtn) {
+        exitBtn.onclick = () => {
+            location.reload(); 
+        };
+    }
 });
