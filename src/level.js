@@ -42,6 +42,9 @@ const BLANK_ARENA_LAYOUT = [
 ];
 
 export function setupLevel(scene, customData = null, isBlank = false) {
+    // Clear existing level meshes from scene
+    levelMeshes.forEach(mesh => scene.remove(mesh));
+    
     collidableBoxes.length = 0; 
     levelMeshes.length = 0; 
     
@@ -64,6 +67,7 @@ export function setupLevel(scene, customData = null, isBlank = false) {
         new THREE.MeshStandardMaterial({ color: 0x444444 })
     );
     floor.position.set(0, -0.5, floorZ);
+    floor.userData.isFloor = true; // Tag for editor
     scene.add(floor); 
     levelMeshes.push(floor);
 

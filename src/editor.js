@@ -89,7 +89,7 @@ export function updateEditor() {
     
     raycaster.setFromCamera(mouse, camera);
     // Intersect floor + editor objects (excluding walls)
-    const floor = scene.children.find(c => c.geometry instanceof THREE.BoxGeometry && c.position.y === -0.5);
+    const floor = scene.children.find(c => c.userData.isFloor);
     const snappableObjects = editorObjects.filter(obj => obj.userData.type !== 'wall');
     const intersects = raycaster.intersectObjects([floor, ...snappableObjects].filter(Boolean), true);
     
