@@ -21,9 +21,9 @@ const _euler = new THREE.Euler();
 const _up = new THREE.Vector3(0, 1, 0);
 const _moveDir = new THREE.Vector3();
 
-export function setupPlayer(scene, camera) {
+export function setupPlayer(scene, camera, spawn = { x: 0, y: 0, z: 0 }) {
     if (camera) _camera = camera;
-    playerPosition.set(0, 0, 0);
+    playerPosition.set(spawn.x, spawn.y, spawn.z);
     velocity.set(0, 0, 0);
 }
 

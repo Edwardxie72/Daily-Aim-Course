@@ -65,7 +65,7 @@ export function resetLevel() {
     resetAmmo();
     
     const spawn = (gameStatus.customLevel && gameStatus.customLevel.spawn) ? gameStatus.customLevel.spawn : { x: 0, y: 0, z: 0, yaw: 0 };
-    setupPlayer(null, camera);
+    setupPlayer(null, camera, spawn);
     camera.position.set(spawn.x, spawn.y + 1.37, spawn.z);
     cameraAngle.pitch = 0;
     cameraAngle.yaw = spawn.yaw || 0;

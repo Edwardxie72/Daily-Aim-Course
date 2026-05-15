@@ -1,4 +1,4 @@
-import { THREE, scene, camera, gameStatus } from './state.js';
+import { THREE, scene, camera, gameStatus, cameraAngle, applyCameraRotation } from './state.js';
 import { setupLevel } from './level.js';
 import { setupTargets, robotBodyTexture, robotHeadTexture } from './targets.js';
 import { setEditorControlsActive } from './editorControls.js';
@@ -281,6 +281,21 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
     
+    const testBtn = document.getElementById('editor-test');
+    if (testBtn) {
+        testBtn.onclick = () => {
+            const data = getSerializedData();
+            gameStatus.customLevel = data;
+            gameStatus.isTesting = true;
+            
+            setEditorActive(false);
+            const hud = document.getElementById('editor-hud');
+            if (hud) hud.style.display = 'none';
+            
+            showReadyScreen();
+        };
+    }
+
     const exitBtn = document.getElementById('editor-exit');
     if (exitBtn) {
         exitBtn.onclick = () => {

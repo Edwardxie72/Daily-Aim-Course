@@ -296,7 +296,7 @@ export function updateTargets(delta) {
     });
 }
 
-export function getTotalTargets() { return initialPositions.length; }
+export function getTotalTargets() { return activePositions.length; }
 
 /**
  * Triggers rendering-related effects (like bullet holes) once during loading.
