@@ -178,7 +178,7 @@ export function setupTargets(customData = null) {
     targets.forEach(t => scene.remove(t));
     targets = [];
 
-    activePositions = customData || initialPositions;
+    activePositions = (customData !== null) ? customData : initialPositions;
 
     activePositions.forEach(pos => {
         const wrapper = new THREE.Group();

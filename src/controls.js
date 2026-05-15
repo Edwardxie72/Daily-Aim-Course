@@ -98,7 +98,7 @@ export function setupControls() {
         if (isListeningForKey) return;
         if (document.pointerLockElement !== document.body) {
             // Don't request pointer lock if clicking a button
-            if (e.target.tagName === 'BUTTON') return;
+            if (e.target.closest('BUTTON')) return;
 
             const readyScreen = document.getElementById('ready-screen');
             const pauseMenu = document.getElementById('pause-menu');

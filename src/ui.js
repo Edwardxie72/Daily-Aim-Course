@@ -2,8 +2,9 @@ import { setSens, getSens, setKeyBind, setIsListeningForKey, loadSettings } from
 import { getAmmoInfo } from './weapon.js';
 import { gameStatus, keyBinds, settings } from './state.js';
 import { fetchLeaderboard, submitTime, updateLeaderboardUI } from './leaderboard.js';
-import { showMainMenu, showReadyScreen, startGame } from './gameLogic.js';
+import { showMainMenu, showReadyScreen, startGame, hideAllMenus } from './gameLogic.js';
 import { updateVolume } from './sfx.js';
+import { stopTesting } from './editor.js';
 
 export function setupUI() {
     loadSettings();
@@ -86,6 +87,8 @@ export function setupUI() {
     document.getElementById('pause-mainmenu-btn').addEventListener('click', () => {
         showMainMenu();
     });
+
+    const pauseEditorBtn = document.getElementById('pause-editor-btn');
 
     // ---- Keybinds back button ----
     document.getElementById('save-keybinds-btn').addEventListener('click', () => {

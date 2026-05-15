@@ -37,13 +37,17 @@ export function showReadyScreen() {
     setLeaderboard(false);
 }
 
-function hideAllMenus() {
+export function hideAllMenus() {
     const menus = ['main-menu', 'custom-menu', 'ready-screen', 'pause-menu', 'results-overlay', 'keybinds-screen', 'hud', 'editor-hud'];
     menus.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
+
+    const editorBtn = document.getElementById('pause-editor-btn');
+    if (editorBtn) editorBtn.style.display = 'none';
 }
+window.hideAllMenus = hideAllMenus;
 
 export function resetLevel() {
     // If testing from editor, don't use the daily layout
@@ -65,11 +69,9 @@ export function resetLevel() {
     resetAmmo();
     
     const spawn = (gameStatus.customLevel && gameStatus.customLevel.spawn) ? gameStatus.customLevel.spawn : { x: 0, y: 0, z: 0, yaw: 0 };
-    setupPlayer(null, camera, spawn);
-    camera.position.set(spawn.x, spawn.y + 1.37, spawn.z);
-    cameraAngle.pitch = 0;
-    cameraAngle.yaw = spawn.yaw || 0;
-    applyCameraRotation();
+    console.log("Aim Course - Resetting level. Spawn point:", spawn);
+    
+    setupPlayer(scene, camera, spawn);
 }
 
 export function startGame() {
@@ -88,6 +90,13 @@ export function pauseGame() {
     gameStatus.elapsedTime += (performance.now() - gameStatus.startTime) / 1000;
     document.exitPointerLock();
     document.getElementById('pause-menu').style.display = 'flex';
+    
+    // Show/hide Back to Editor button based on testing status
+    const editorBtn = document.getElementById('pause-editor-btn');
+    if (editorBtn) {
+        console.log("Aim Course - Pause Menu. isTesting:", gameStatus.isTesting);
+        editorBtn.style.display = gameStatus.isTesting ? 'flex' : 'none';
+    }
 }
 
 export function resumeGame() {

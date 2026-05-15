@@ -80,6 +80,7 @@
                 <div class="pause-buttons">
                     <button id="pause-resume-btn" class="menu-btn">▶ Resume</button>
                     <button id="pause-restart-btn" class="menu-btn">↺ Restart</button>
+                    <button id="pause-editor-btn" class="menu-btn secondary-btn" onclick="window.stopTestingFromMenu()">🛠 Back to Editor</button>
                     <button id="pause-keybinds-btn" class="menu-btn">⌨ Keybinds</button>
                     <button id="pause-mainmenu-btn" class="menu-btn danger-btn">⟵ Main Menu</button>
                 </div>
@@ -133,16 +134,18 @@
 
         <!-- ======================== LEVEL EDITOR HUD ======================== -->
         <div id="editor-hud" style="display: none;">
+            <div id="editor-hint">R: Rotate Object | Right-Click + Drag: Look | WASD: Move</div>
             <div id="editor-toolbar">
                 <button class="editor-tool active" data-tool="box">📦 Box [1]</button>
                 <button class="editor-tool" data-tool="wall">🧱 Wall [2]</button>
                 <button class="editor-tool" data-tool="target">🎯 Target [3]</button>
                 <button class="editor-tool" data-tool="spawn">🚩 Spawn [4]</button>
+                <button class="editor-tool" data-tool="door">🚪 Door [5]</button>
                 <div class="divider"></div>
                 <button id="editor-undo">↩ Undo</button>
                 <button id="editor-redo">↪ Redo</button>
                 <div class="divider"></div>
-                <button id="editor-test" class="accent-btn">🎮 Test [T]</button>
+                <button id="editor-test" class="accent-btn" disabled>🎮 Test</button>
                 <button id="editor-export">💾 Export</button>
                 <button id="editor-import">📂 Import</button>
                 <button id="editor-exit" class="danger-btn">✖ Exit</button>

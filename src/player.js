@@ -1,4 +1,4 @@
-import { THREE, inputState } from './state.js';
+import { THREE, inputState, cameraAngle, applyCameraRotation } from './state.js';
 import { collidableBoxes } from './level.js';
 
 let _camera;
@@ -21,10 +21,25 @@ const _euler = new THREE.Euler();
 const _up = new THREE.Vector3(0, 1, 0);
 const _moveDir = new THREE.Vector3();
 
-export function setupPlayer(scene, camera, spawn = { x: 0, y: 0, z: 0 }) {
+export function setupPlayer(scene, camera, spawn = { x: 0, y: 0, z: 0, yaw: 0 }) {
     if (camera) _camera = camera;
-    playerPosition.set(spawn.x, spawn.y, spawn.z);
+    
+    const sx = (spawn && typeof spawn.x === 'number') ? spawn.x : 0;
+    const sy = (spawn && typeof spawn.y === 'number') ? spawn.y : 0;
+    const sz = (spawn && typeof spawn.z === 'number') ? spawn.z : 0;
+    const yaw = (spawn && typeof spawn.yaw === 'number') ? spawn.yaw : 0;
+    
+    playerPosition.set(sx, sy, sz);
     velocity.set(0, 0, 0);
+    
+    // Update camera angle state synchronously
+    cameraAngle.yaw = yaw;
+    cameraAngle.pitch = 0;
+    applyCameraRotation();
+
+    if (_camera) {
+        _camera.position.set(sx, sy + 1.37, sz);
+    }
 }
 
 // Reusable objects for physics/collisions

@@ -13,6 +13,7 @@ scene.add(editorGroup);
 
 const editorObjects = [];
 let playerSpawn = { x: 0, y: 0, z: 0, yaw: 0 };
+let ghostRotation = 0;
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -29,6 +30,9 @@ export function setEditorActive(active, isBlank = false) {
     setWeaponVisible(!active); 
     
     editorGroup.visible = active;
+    const hud = document.getElementById('editor-hud');
+    if (hud) hud.style.display = active ? 'block' : 'none';
+    if (active) validateLevel();
     
     if (active) {
         document.exitPointerLock();
@@ -64,7 +68,9 @@ function clearLevel() {
 
     setupLevel(scene, null, true); 
     setupTargets([]);
+    validateLevel();
 }
+
 
 function createGhost() {
     if (ghostObject) editorGroup.remove(ghostObject);
@@ -77,23 +83,55 @@ function createGhost() {
             new THREE.BoxGeometry(0.8, 1.17, 0.05),
             new THREE.MeshStandardMaterial({ map: robotBodyTexture, transparent: true, opacity: 0.7 })
         );
+        body.position.y = 0.585; // Bottom at 0
         const head = new THREE.Mesh(
             new THREE.BoxGeometry(0.35, 0.35, 0.05),
             new THREE.MeshStandardMaterial({ map: robotHeadTexture, transparent: true, opacity: 0.7 })
         );
-        head.position.y = 0.76;
+        head.position.y = 1.37; // Bottom at 0
         ghostObject.add(body);
         ghostObject.add(head);
+
+        // Add direction arrow
+        const arrow = new THREE.Mesh(
+            new THREE.ConeGeometry(0.2, 0.5, 8),
+            new THREE.MeshStandardMaterial({ color: 0xffff00 })
+        );
+        arrow.rotation.x = Math.PI / 2;
+        arrow.position.z = 0.1;
+        arrow.position.y = 0.5; // Visible above ground
+        ghostObject.add(arrow);
     } else {
         let geo;
         if (currentTool === 'box') geo = new THREE.BoxGeometry(2, 2, 2);
         else if (currentTool === 'wall') geo = new THREE.BoxGeometry(1, 10, 10);
-        else if (currentTool === 'spawn') geo = new THREE.BoxGeometry(0.6, 2, 0.6);
+        else if (currentTool === 'spawn') {
+            geo = new THREE.BoxGeometry(0.6, 2, 0.6);
+            ghostObject = new THREE.Group();
+            const body = new THREE.Mesh(geo, ghostMat);
+            body.position.y = 1.0; // Bottom at 0
+            ghostObject.add(body);
+            
+            // Add direction arrow for spawn
+            const arrow = new THREE.Mesh(
+                new THREE.ConeGeometry(0.2, 0.5, 8),
+                new THREE.MeshStandardMaterial({ color: 0xffff00 })
+            );
+            arrow.rotation.x = -Math.PI / 2;
+            arrow.position.z = -0.5;
+            arrow.position.y = 0.5;
+            ghostObject.add(arrow);
+        } else if (currentTool === 'door') {
+            ghostObject = createDoorMesh(ghostMat);
+        }
         
-        ghostObject = new THREE.Mesh(geo, ghostMat);
+        if (!ghostObject || (currentTool !== 'spawn' && currentTool !== 'door')) {
+            ghostObject = new THREE.Mesh(geo, ghostMat);
+        }
     }
     
     ghostObject.userData.isGhost = true;
+    ghostObject.rotation.y = ghostRotation;
     editorGroup.add(ghostObject);
 }
 
@@ -101,8 +139,9 @@ export function updateEditor() {
     if (!editorActive || !ghostObject) return;
     
     raycaster.setFromCamera(mouse, camera);
-    const floor = scene.children.find(c => c.userData.isFloor);
-    const snappableObjects = editorObjects.filter(obj => obj.userData.type !== 'wall');
+    const floor = scene.children.find(c => c && c.userData && c.userData.isFloor);
+    // Allow snapping to all static objects except targets and spawn points themselves
+    const snappableObjects = editorObjects.filter(obj => obj && obj.userData && !obj.userData.isTarget && !obj.userData.isSpawn);
     const intersects = raycaster.intersectObjects([floor, ...snappableObjects].filter(Boolean), true);
     
     if (intersects.length > 0) {
@@ -124,11 +163,46 @@ export function updateEditor() {
         pos.x = Math.round(pos.x * 2) / 2;
         pos.z = Math.round(pos.z * 2) / 2;
         
-        // Calculate Y based on object height
+        // Calculate Y based on object type (pivot at center vs bottom)
         const h = size.y;
-        pos.y = Math.round((hit.point.y + h / 2) * 2) / 2;
+        const isGroup = ghostObject.type === 'Group';
+        pos.y = isGroup ? hit.point.y : Math.round((hit.point.y + h / 2) * 2) / 2;
         
         ghostObject.position.copy(pos);
+
+        // Check for collisions with other objects
+        const ghostAABB_check = new THREE.Box3().setFromObject(ghostObject);
+        // Shrink slightly to allow surface touching
+        ghostAABB_check.expandByScalar(-0.05); 
+        
+        let isColliding = false;
+        for (const obj of editorObjects) {
+            if (obj.userData.isGhost) continue;
+            const objAABB = new THREE.Box3().setFromObject(obj);
+            if (ghostAABB_check.intersectsBox(objAABB)) {
+                isColliding = true;
+                break;
+            }
+        }
+
+        // Tint ghost red if colliding
+        if (isColliding) {
+            ghostObject.traverse(child => {
+                if (child.material) {
+                    child.material.color.setHex(0xff3333);
+                    child.material.opacity = 0.6;
+                }
+            });
+            ghostObject.userData.isColliding = true;
+        } else {
+            ghostObject.traverse(child => {
+                if (child.material) {
+                    child.material.color.setHex(0x4ade80);
+                    child.material.opacity = 0.4;
+                }
+            });
+            ghostObject.userData.isColliding = false;
+        }
     }
 }
 
@@ -142,59 +216,126 @@ export function placeObject() {
             new THREE.BoxGeometry(0.8, 1.17, 0.05),
             new THREE.MeshStandardMaterial({ map: robotBodyTexture })
         );
+        body.position.y = 0.585;
         const head = new THREE.Mesh(
             new THREE.BoxGeometry(0.35, 0.35, 0.05),
             new THREE.MeshStandardMaterial({ map: robotHeadTexture })
         );
-        head.position.y = 0.76;
+        head.position.y = 1.37;
         newObj.add(body);
         newObj.add(head);
-    } else {
-        let mat;
-        if (currentTool === 'box') mat = boxMat.clone();
-        else if (currentTool === 'wall') mat = wallMat.clone();
-        else if (currentTool === 'spawn') mat = spawnMat.clone();
-        
-        // Since ghost might be a Group (though currently only target is), handle geometry cloning
-        const geo = ghostObject.geometry ? ghostObject.geometry.clone() : ghostObject.children[0].geometry.clone();
-        newObj = new THREE.Mesh(geo, mat);
-    }
-    
-    newObj.position.copy(ghostObject.position);
-    newObj.rotation.copy(ghostObject.rotation);
-    
-    newObj.userData.type = currentTool;
-    newObj.userData.isTarget = (currentTool === 'target');
-    newObj.userData.isSpawn = (currentTool === 'spawn');
-    
-    if (newObj.userData.isSpawn) {
-        const oldSpawn = editorObjects.find(o => o.userData.isSpawn);
+
+        // Add direction arrow helper
+        const arrow = new THREE.Mesh(
+            new THREE.ConeGeometry(0.2, 0.5, 8),
+            new THREE.MeshStandardMaterial({ color: 0xffff00 })
+        );
+        arrow.rotation.x = Math.PI / 2;
+        arrow.position.z = 0.1;
+        arrow.position.y = 0.5;
+        arrow.userData.isHelper = true;
+        newObj.add(arrow);
+
+        newObj.userData.isTarget = true;
+    } else if (currentTool === 'spawn') {
+        newObj = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 2, 0.6), spawnMat.clone());
+        body.position.y = 1.0;
+        newObj.add(body);
+
+        // Add direction arrow helper
+        const arrow = new THREE.Mesh(
+            new THREE.ConeGeometry(0.2, 0.5, 8),
+            new THREE.MeshStandardMaterial({ color: 0xffff00 })
+        );
+        arrow.rotation.x = -Math.PI / 2;
+        arrow.position.z = -0.5;
+        arrow.position.y = 0.5;
+        arrow.userData.isHelper = true;
+        newObj.add(arrow);
+
+        // Remove old spawn if exists
+        const oldSpawn = editorObjects.find(o => o && o.userData && o.userData.isSpawn);
         if (oldSpawn) {
             editorGroup.remove(oldSpawn);
             editorObjects.splice(editorObjects.indexOf(oldSpawn), 1);
         }
-        playerSpawn = { x: newObj.position.x, y: newObj.position.y - 1, z: newObj.position.z, yaw: newObj.rotation.y };
+        newObj.userData.isSpawn = true;
+    } else if (currentTool === 'door') {
+        newObj = createDoorMesh(wallMat.clone());
+        newObj.userData.type = 'door';
+    } else {
+        const mat = currentTool === 'wall' ? wallMat.clone() : boxMat.clone();
+        newObj = new THREE.Mesh(ghostObject.geometry.clone(), mat);
+        newObj.userData.type = currentTool;
     }
     
-    editorGroup.add(newObj);
-    editorObjects.push(newObj);
+    if (newObj) {
+        if (ghostObject.userData.isColliding) {
+            // Optional: could play a "no" sound here
+            return;
+        }
+        newObj.position.copy(ghostObject.position);
+        newObj.rotation.copy(ghostObject.rotation);
+        
+        editorGroup.add(newObj);
+        editorObjects.push(newObj);
+        validateLevel();
+    }
 }
+
+function validateLevel() {
+    const testBtn = document.getElementById('editor-test');
+    if (!testBtn) return;
+
+    let hasSpawn = false;
+    let hasTarget = false;
+
+    editorGroup.children.forEach(obj => {
+        if (!obj || obj.userData.isGhost || obj.userData.isHelper) return;
+        if (obj.userData.isSpawn) hasSpawn = true;
+        if (obj.userData.isTarget) hasTarget = true;
+    });
+
+    testBtn.disabled = !(hasSpawn && hasTarget);
+    testBtn.title = testBtn.disabled ? "Add a spawn point and at least one target to test" : "Test your level";
+}
+
+window.addEventListener('keydown', (e) => {
+    if (!editorActive) return;
+    if (e.code === 'KeyR') {
+        ghostRotation += Math.PI / 4; // 45 degree increments
+        if (ghostObject) ghostObject.rotation.y = ghostRotation;
+    }
+});
 
 export function getSerializedData() {
     const data = {
-        spawn: playerSpawn,
+        spawn: { x: 0, y: 0, z: 0, yaw: 0 },
         blocks: [],
         targets: []
     };
     
-    editorObjects.forEach(obj => {
+    // Scan all objects in the editor group
+    editorGroup.children.forEach(obj => {
+        if (!obj || obj.userData.isGhost || obj.userData.isHelper) return;
+
         if (obj.userData.isTarget) {
             data.targets.push({
-                x: obj.position.x, y: obj.position.y - 0.585, z: obj.position.z,
+                x: obj.position.x, 
+                y: obj.position.y, 
+                z: obj.position.z,
                 rotY: obj.rotation.y
             });
-        } else if (!obj.userData.isSpawn) {
-            // Get size from AABB or geometry
+        } else if (obj.userData.isSpawn) {
+            data.spawn = {
+                x: obj.position.x,
+                y: obj.position.y,
+                z: obj.position.z,
+                yaw: obj.rotation.y
+            };
+        } else if (obj.userData.type) {
+            // It's a block or wall
             const size = new THREE.Vector3();
             if (obj.geometry) {
                 size.set(obj.geometry.parameters.width, obj.geometry.parameters.height, obj.geometry.parameters.depth);
@@ -203,6 +344,7 @@ export function getSerializedData() {
             }
             
             data.blocks.push({
+                type: obj.userData.type,
                 size: [size.x, size.y, size.z],
                 pos: [obj.position.x, obj.position.y, obj.position.z],
                 rot: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
@@ -210,6 +352,7 @@ export function getSerializedData() {
             });
         }
     });
+
     return data;
 }
 
@@ -218,11 +361,30 @@ export function exportLevel() {
 }
 
 export function stopTesting() {
+    console.log("Aim Course - stopTesting() called. Re-activating editor.");
     gameStatus.isTesting = false;
+    gameStatus.running = false;
+    
+    // Clear any focus on buttons/menus to ensure keys work
+    if (document.activeElement) document.activeElement.blur();
+    window.focus();
+
     const hud = document.getElementById('editor-hud');
     if (hud) hud.style.display = 'block';
     setEditorActive(true);
 }
+
+// Global helper for the pause menu button
+window.stopTestingFromMenu = function() {
+    console.log("Aim Course - Global stopTestingFromMenu called");
+    try {
+        if (typeof window.hideAllMenus === 'function') window.hideAllMenus();
+        stopTesting();
+    } catch (e) {
+        console.error("Failed to stop testing:", e);
+        alert("Error returning to editor. Check console.");
+    }
+};
 
 function selectTool(tool) {
     currentTool = tool;
@@ -235,15 +397,13 @@ function selectTool(tool) {
 
 window.addEventListener('keydown', (e) => {
     if (!editorActive) return;
+    console.log("Aim Course - Editor KeyDown:", e.code);
     
     if (e.code === 'Digit1') selectTool('box');
     if (e.code === 'Digit2') selectTool('wall');
     if (e.code === 'Digit3') selectTool('target');
     if (e.code === 'Digit4') selectTool('spawn');
-    
-    if (e.code === 'KeyR' && ghostObject) {
-        ghostObject.rotation.y += Math.PI / 4; 
-    }
+    if (e.code === 'Digit5') selectTool('door');
 });
 
 window.addEventListener('mousemove', (e) => {
@@ -281,20 +441,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
     
-    const testBtn = document.getElementById('editor-test');
-    if (testBtn) {
-        testBtn.onclick = () => {
-            const data = getSerializedData();
-            gameStatus.customLevel = data;
-            gameStatus.isTesting = true;
-            
-            setEditorActive(false);
-            const hud = document.getElementById('editor-hud');
-            if (hud) hud.style.display = 'none';
-            
-            showReadyScreen();
-        };
-    }
 
     const exitBtn = document.getElementById('editor-exit');
     if (exitBtn) {
@@ -303,3 +449,36 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 });
+
+export function createDoorMesh(material) {
+    const group = new THREE.Group();
+    
+    // Total Wall: 1 x 10 x 10
+    // Door cutout: 1 x 2.8 x 1.8 (bottom middle)
+    const wallDepth = 10;
+    const wallHeight = 10;
+    const doorWidth = 1.8;
+    const doorHeight = 2.8;
+    
+    const sideDepth = (wallDepth - doorWidth) / 2;
+    
+    // Left side
+    const leftSide = new THREE.Mesh(new THREE.BoxGeometry(1, wallHeight, sideDepth), material);
+    leftSide.position.z = (doorWidth + sideDepth) / 2;
+    leftSide.position.y = wallHeight / 2;
+    group.add(leftSide);
+    
+    // Right side
+    const rightSide = new THREE.Mesh(new THREE.BoxGeometry(1, wallHeight, sideDepth), material);
+    rightSide.position.z = -(doorWidth + sideDepth) / 2;
+    rightSide.position.y = wallHeight / 2;
+    group.add(rightSide);
+    
+    // Top piece
+    const topHeight = wallHeight - doorHeight;
+    const topPiece = new THREE.Mesh(new THREE.BoxGeometry(1, topHeight, doorWidth), material);
+    topPiece.position.y = doorHeight + topHeight / 2;
+    group.add(topPiece);
+    
+    return group;
+}

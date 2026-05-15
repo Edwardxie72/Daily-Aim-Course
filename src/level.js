@@ -1,4 +1,5 @@
 import { THREE } from './state.js';
+import { createDoorMesh } from './editor.js';
 
 export const collidableBoxes = [];
 export const levelMeshes = [];
@@ -51,8 +52,18 @@ export function setupLevel(scene, customData = null, isBlank = false) {
     function addStaticObject(mesh) {
         scene.add(mesh);
         mesh.updateMatrixWorld();
-        const box = new THREE.Box3().setFromObject(mesh);
-        collidableBoxes.push(box);
+        
+        if (mesh instanceof THREE.Group) {
+            // Add each part of the group to the collision list
+            mesh.children.forEach(child => {
+                const worldBox = new THREE.Box3().setFromObject(child);
+                collidableBoxes.push(worldBox);
+            });
+        } else {
+            const box = new THREE.Box3().setFromObject(mesh);
+            collidableBoxes.push(box);
+        }
+        
         levelMeshes.push(mesh);
     }
 
@@ -72,13 +83,28 @@ export function setupLevel(scene, customData = null, isBlank = false) {
     levelMeshes.push(floor);
 
     let layout = customData;
-    if (!layout) {
-        layout = isBlank ? BLANK_ARENA_LAYOUT : DEFAULT_LAYOUT;
+    if (!layout || layout.length === 0) {
+        layout = (isCustom || isBlank) ? BLANK_ARENA_LAYOUT : DEFAULT_LAYOUT;
+    }
+    
+    // Always add perimeter walls for custom levels to ensure containment
+    if (isCustom || isBlank) {
+        BLANK_ARENA_LAYOUT.forEach(wall => {
+            const mat = new THREE.MeshStandardMaterial({ color: wall.color });
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(...wall.size), mat);
+            mesh.position.set(...wall.pos);
+            addStaticObject(mesh);
+        });
     }
     
     layout.forEach(b => {
         const mat = new THREE.MeshStandardMaterial({ color: b.color || 0x666666 });
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(...b.size), mat);
+        let mesh;
+        if (b.type === 'door') {
+            mesh = createDoorMesh(mat);
+        } else {
+            mesh = new THREE.Mesh(new THREE.BoxGeometry(...b.size), mat);
+        }
         mesh.position.set(...b.pos);
         if (b.rot) mesh.rotation.set(...b.rot);
         addStaticObject(mesh);
