@@ -33,7 +33,15 @@ const DEFAULT_LAYOUT = [
     { size: [3, 8, 3], pos: [7, 3.5, -50], color: 0x666666 }
 ];
 
-export function setupLevel(scene, customData = null) {
+const BLANK_ARENA_LAYOUT = [
+    // Perimeter Walls for 100x100 Arena
+    { size: [1, 10, 100], pos: [-50, 5, 0], color: 0x333333 }, // Left
+    { size: [1, 10, 100], pos: [50, 5, 0], color: 0x333333 },  // Right
+    { size: [100, 10, 1], pos: [0, 5, 50], color: 0x333333 },  // Back
+    { size: [100, 10, 1], pos: [0, 5, -50], color: 0x333333 }  // Front
+];
+
+export function setupLevel(scene, customData = null, isBlank = false) {
     collidableBoxes.length = 0; 
     levelMeshes.length = 0; 
     
@@ -45,16 +53,24 @@ export function setupLevel(scene, customData = null) {
         levelMeshes.push(mesh);
     }
 
-    // Floor (20x70, from z=10 to z=-60)
+    // Floor
+    const isCustom = !!customData || isBlank;
+    const floorSize = isCustom ? 100 : 70;
+    const floorWidth = isCustom ? 100 : 20;
+    const floorZ = isCustom ? 0 : -25;
+    
     const floor = new THREE.Mesh(
-        new THREE.BoxGeometry(20, 1, 70),
+        new THREE.BoxGeometry(floorWidth, 1, floorSize),
         new THREE.MeshStandardMaterial({ color: 0x444444 })
     );
-    floor.position.set(0, -0.5, -25);
+    floor.position.set(0, -0.5, floorZ);
     scene.add(floor); 
     levelMeshes.push(floor);
 
-    const layout = customData || DEFAULT_LAYOUT;
+    let layout = customData;
+    if (!layout) {
+        layout = isBlank ? BLANK_ARENA_LAYOUT : DEFAULT_LAYOUT;
+    }
     
     layout.forEach(b => {
         const mat = new THREE.MeshStandardMaterial({ color: b.color || 0x666666 });

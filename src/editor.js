@@ -49,6 +49,25 @@ function clearLevel() {
     editorObjects.forEach(obj => editorGroup.remove(obj));
     editorObjects.length = 0;
     playerSpawn = { x: 0, y: 0, z: 0, yaw: 0 };
+    
+    // Perimeter Walls for 100x100 Arena
+    const walls = [
+        { size: [1, 10, 100], pos: [-50, 5, 0], color: 0x333333 }, // Left
+        { size: [1, 10, 100], pos: [50, 5, 0], color: 0x333333 },  // Right
+        { size: [100, 10, 1], pos: [0, 5, 50], color: 0x333333 },  // Back
+        { size: [100, 10, 1], pos: [0, 5, -50], color: 0x333333 }  // Front
+    ];
+    
+    walls.forEach(w => {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(...w.size), new THREE.MeshStandardMaterial({ color: w.color }));
+        mesh.position.set(...w.pos);
+        mesh.userData.type = 'wall';
+        editorGroup.add(mesh);
+        editorObjects.push(mesh);
+    });
+
+    setupLevel(scene, null, true); 
+    setupTargets([]);
 }
 
 function createGhost() {
