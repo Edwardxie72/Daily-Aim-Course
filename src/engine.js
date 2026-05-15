@@ -9,6 +9,8 @@ import { setupWeapon, updateWeapon } from './weapon.js';
 import { setupUI, updateHUD } from './ui.js';
 import { initSFX } from './sfx.js';
 import { showMainMenu } from './gameLogic.js';
+import { updateEditor } from './editor.js';
+import { updateEditorControls } from './editorControls.js';
 
 window.addEventListener('resize', onWindowResize);
 function onWindowResize() {
@@ -143,6 +145,9 @@ function animate() {
     updateWeapon(delta, inputState.shoot);
     updateCameraRotation();
     updateHUD();
+
+    updateEditor();
+    updateEditorControls(delta);
 
     renderer.render(scene, camera);
 }

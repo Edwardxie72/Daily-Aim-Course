@@ -41,7 +41,8 @@ export const gameStatus = {
     startTime: 0,
     elapsedTime: 0,
     totalTargets: 5,
-    targetsLeft: 5
+    targetsLeft: 5,
+    customLevel: null // Holds custom layout/target data if playing a shared code
 };
 
 export const settings = {

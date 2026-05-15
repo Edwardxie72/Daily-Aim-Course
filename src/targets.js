@@ -142,7 +142,7 @@ export function resetTargets() {
     }
 
     targets.forEach((wrapper, i) => {
-        const pos = initialPositions[i];
+        const pos = activePositions[i];
         if (!pos) return;
 
         // Reset transform
@@ -172,11 +172,15 @@ export function resetTargets() {
     applyTextureMode();
 }
 
-export function setupTargets() {
+let activePositions = [];
+
+export function setupTargets(customData = null) {
     targets.forEach(t => scene.remove(t));
     targets = [];
 
-    initialPositions.forEach(pos => {
+    activePositions = customData || initialPositions;
+
+    activePositions.forEach(pos => {
         const wrapper = new THREE.Group();
         wrapper.position.set(pos.x, pos.y, pos.z);
         

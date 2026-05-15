@@ -133,6 +133,102 @@ body, html {
     margin-top: 15px;
 }
 
+/* ======================== LEVEL EDITOR ======================== */
+#editor-hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 100;
+}
+
+#editor-toolbar {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 15, 20, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px;
+    border-radius: 12px;
+    display: flex;
+    gap: 8px;
+    pointer-events: auto;
+}
+
+#editor-toolbar button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+#editor-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+#editor-toolbar button.active {
+    background: var(--primary);
+    border-color: var(--primary-glow);
+}
+
+#editor-toolbar .divider {
+    width: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 4px 0;
+}
+
+#editor-selection-panel {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(15, 15, 20, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 12px;
+    width: 280px;
+    pointer-events: auto;
+}
+
+#editor-selection-panel h3 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    color: var(--primary);
+}
+
+#editor-selection-panel input[type="number"] {
+    width: 60px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+#editor-toolbar .accent-btn {
+    background: var(--primary) !important;
+    color: #000 !important;
+    font-weight: 700;
+}
+
+#editor-toolbar .danger-btn {
+    background: rgba(255, 50, 50, 0.2) !important;
+    border-color: rgba(255, 50, 50, 0.4) !important;
+}
+
+#editor-toolbar .danger-btn:hover {
+    background: rgba(255, 50, 50, 0.4) !important;
+}
+
 /* ===================== MAIN MENU ===================== */
 #main-menu {
     position: absolute;

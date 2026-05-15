@@ -41,6 +41,7 @@
                 <div class="menu-buttons">
                     <button id="daily-game-btn" class="big-btn">▶ Daily Game</button>
                     <button id="archives-btn" class="big-btn secondary-btn">📅 Archives</button>
+                    <button id="custom-game-btn" class="big-btn secondary-btn">🔧 Custom Game</button>
                 </div>
 
                 <div class="settings">
@@ -85,6 +86,23 @@
             </div>
         </div>
 
+        <!-- ======================== CUSTOM MENU ======================== -->
+        <div id="custom-menu" style="display: none;">
+            <div id="custom-menu-center">
+                <h1>Custom Game</h1>
+                <p class="subtitle">Play a shared course or create your own</p>
+
+                <div class="menu-buttons">
+                    <button id="import-code-btn" class="big-btn">📥 Play from Code</button>
+                    <button id="launch-editor-btn" class="big-btn secondary-btn">🛠 Level Editor</button>
+                </div>
+
+                <div class="settings">
+                    <button id="custom-back-btn" class="menu-btn" style="width: 100%;">Back to Main Menu</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ======================== KEYBINDS SCREEN ======================== -->
         <div id="keybinds-screen" style="display: none;">
             <h2>Keybinds</h2>
@@ -109,6 +127,38 @@
                 <p class="submit-label">Enter your initials</p>
                 <input type="text" id="name-input" maxlength="3" placeholder="AAA">
                 <button id="submit-btn" class="menu-btn" style="margin-top: 10px; width: 100%;">Submit to Leaderboard</button>
+            </div>
+        </div>
+
+        <!-- ======================== LEVEL EDITOR HUD ======================== -->
+        <div id="editor-hud" style="display: none;">
+            <div id="editor-toolbar">
+                <button class="editor-tool active" data-tool="box">📦 Box</button>
+                <button class="editor-tool" data-tool="wall">🧱 Wall</button>
+                <button class="editor-tool" data-tool="target">🎯 Target</button>
+                <button class="editor-tool" data-tool="spawn">🚩 Spawn</button>
+                <div class="divider"></div>
+                <button id="editor-undo">↩ Undo</button>
+                <button id="editor-redo">↪ Redo</button>
+                <div class="divider"></div>
+                <button id="editor-test" class="accent-btn">🎮 Test Level</button>
+                <button id="editor-export">💾 Export Code</button>
+                <button id="editor-import">📂 Import Code</button>
+                <button id="editor-exit" class="danger-btn">✖ Exit</button>
+            </div>
+            <div id="editor-selection-panel" style="display: none;">
+                <h3>Selected Object</h3>
+                <div class="setting-row">
+                    <label>Position X/Y/Z</label>
+                    <input type="number" id="sel-pos-x" step="0.5">
+                    <input type="number" id="sel-pos-y" step="0.5">
+                    <input type="number" id="sel-pos-z" step="0.5">
+                </div>
+                <div class="setting-row">
+                    <label>Rotation Y</label>
+                    <input type="range" id="sel-rot-y" min="-180" max="180" step="15">
+                </div>
+                <button id="sel-delete" class="danger-btn" style="width: 100%;">Delete</button>
             </div>
         </div>
     </div>
