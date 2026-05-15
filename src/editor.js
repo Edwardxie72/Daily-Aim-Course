@@ -88,18 +88,26 @@ export function updateEditor() {
     if (!editorActive || !ghostObject) return;
     
     raycaster.setFromCamera(mouse, camera);
-    // Intersect floor + editor objects
+    // Intersect floor + editor objects (excluding walls)
     const floor = scene.children.find(c => c.geometry instanceof THREE.BoxGeometry && c.position.y === -0.5);
-    const intersects = raycaster.intersectObjects([floor, ...editorObjects].filter(Boolean), true);
+    const snappableObjects = editorObjects.filter(obj => obj.userData.type !== 'wall');
+    const intersects = raycaster.intersectObjects([floor, ...snappableObjects].filter(Boolean), true);
     
     if (intersects.length > 0) {
         const hit = intersects[0];
         let pos = hit.point.clone();
+        
+        // Snap to 0.5m grid
         pos.x = Math.round(pos.x * 2) / 2;
         pos.z = Math.round(pos.z * 2) / 2;
         
+        // Calculate Y based on the surface we hit
         const height = ghostObject.geometry.parameters.height || 1;
-        pos.y = Math.round((hit.point.y + height / 2) * 2) / 2;
+        // If we hit the floor, sit on top of it. If we hit another object, sit on top of that.
+        pos.y = hit.point.y + (height / 2);
+        
+        // Final snap for Y
+        pos.y = Math.round(pos.y * 2) / 2;
         
         ghostObject.position.copy(pos);
     }
