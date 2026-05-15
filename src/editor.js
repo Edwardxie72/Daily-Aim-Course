@@ -1,6 +1,6 @@
 import { THREE, scene, camera, gameStatus } from './state.js';
 import { setupLevel } from './level.js';
-import { setupTargets } from './targets.js';
+import { setupTargets, robotBodyTexture, robotHeadTexture } from './targets.js';
 import { setEditorControlsActive } from './editorControls.js';
 import { setWeaponVisible } from './weapon.js';
 
@@ -19,7 +19,6 @@ const mouse = new THREE.Vector2();
 
 // Materials
 const ghostMat = new THREE.MeshStandardMaterial({ color: 0x4ade80, transparent: true, opacity: 0.5 });
-const targetMat = new THREE.MeshStandardMaterial({ color: 0xff4444 });
 const boxMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
 const wallMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
 const spawnMat = new THREE.MeshStandardMaterial({ color: 0x4444ff });
@@ -48,12 +47,11 @@ function clearLevel() {
     editorObjects.length = 0;
     playerSpawn = { x: 0, y: 0, z: 0, yaw: 0 };
     
-    // Perimeter Walls for 60x60 Arena (3x3 grid)
     const walls = [
-        { size: [1, 10, 60], pos: [-30, 5, 0], color: 0x333333 }, // Left
-        { size: [1, 10, 60], pos: [30, 5, 0], color: 0x333333 },  // Right
-        { size: [60, 10, 1], pos: [0, 5, 30], color: 0x333333 },  // Back
-        { size: [60, 10, 1], pos: [0, 5, -30], color: 0x333333 }  // Front
+        { size: [1, 10, 60], pos: [-30, 5, 0], color: 0x333333 }, 
+        { size: [1, 10, 60], pos: [30, 5, 0], color: 0x333333 },  
+        { size: [60, 10, 1], pos: [0, 5, 30], color: 0x333333 },  
+        { size: [60, 10, 1], pos: [0, 5, -30], color: 0x333333 }  
     ];
     
     walls.forEach(w => {
@@ -71,13 +69,30 @@ function clearLevel() {
 function createGhost() {
     if (ghostObject) editorGroup.remove(ghostObject);
     
-    let geo;
-    if (currentTool === 'box') geo = new THREE.BoxGeometry(2, 2, 2);
-    else if (currentTool === 'wall') geo = new THREE.BoxGeometry(1, 10, 10);
-    else if (currentTool === 'target') geo = new THREE.BoxGeometry(0.8, 1.17, 0.05);
-    else if (currentTool === 'spawn') geo = new THREE.BoxGeometry(0.6, 2, 0.6);
+    if (currentTool === 'target') {
+        // Use a composite object for target ghost
+        ghostObject = new THREE.Group();
+        
+        const body = new THREE.Mesh(
+            new THREE.BoxGeometry(0.8, 1.17, 0.05),
+            new THREE.MeshStandardMaterial({ map: robotBodyTexture, transparent: true, opacity: 0.7 })
+        );
+        const head = new THREE.Mesh(
+            new THREE.BoxGeometry(0.35, 0.35, 0.05),
+            new THREE.MeshStandardMaterial({ map: robotHeadTexture, transparent: true, opacity: 0.7 })
+        );
+        head.position.y = 0.76;
+        ghostObject.add(body);
+        ghostObject.add(head);
+    } else {
+        let geo;
+        if (currentTool === 'box') geo = new THREE.BoxGeometry(2, 2, 2);
+        else if (currentTool === 'wall') geo = new THREE.BoxGeometry(1, 10, 10);
+        else if (currentTool === 'spawn') geo = new THREE.BoxGeometry(0.6, 2, 0.6);
+        
+        ghostObject = new THREE.Mesh(geo, ghostMat);
+    }
     
-    ghostObject = new THREE.Mesh(geo, ghostMat);
     ghostObject.userData.isGhost = true;
     editorGroup.add(ghostObject);
 }
@@ -94,13 +109,13 @@ export function updateEditor() {
         const hit = intersects[0];
         let pos = hit.point.clone();
         
-        const w = ghostObject.geometry.parameters.width || 1;
-        const h = ghostObject.geometry.parameters.height || 1;
-        const d = ghostObject.geometry.parameters.depth || 1;
-
-        // Clamp to arena bounds (accounting for wall thickness of 1)
-        const limitX = 29.5 - (w / 2);
-        const limitZ = 29.5 - (d / 2);
+        // Use AABB for accurate clamping (especially for walls/rotated objects)
+        const ghostAABB = new THREE.Box3().setFromObject(ghostObject);
+        const size = new THREE.Vector3();
+        ghostAABB.getSize(size);
+        
+        const limitX = 29.5 - (size.x / 2);
+        const limitZ = 29.5 - (size.z / 2);
         
         pos.x = Math.max(-limitX, Math.min(limitX, pos.x));
         pos.z = Math.max(-limitZ, Math.min(limitZ, pos.z));
@@ -109,6 +124,8 @@ export function updateEditor() {
         pos.x = Math.round(pos.x * 2) / 2;
         pos.z = Math.round(pos.z * 2) / 2;
         
+        // Calculate Y based on object height
+        const h = size.y;
         pos.y = Math.round((hit.point.y + h / 2) * 2) / 2;
         
         ghostObject.position.copy(pos);
@@ -118,13 +135,31 @@ export function updateEditor() {
 export function placeObject() {
     if (!editorActive || !ghostObject) return;
     
-    let mat;
-    if (currentTool === 'box') mat = boxMat.clone();
-    else if (currentTool === 'wall') mat = wallMat.clone();
-    else if (currentTool === 'target') mat = targetMat.clone();
-    else if (currentTool === 'spawn') mat = spawnMat.clone();
+    let newObj;
+    if (currentTool === 'target') {
+        newObj = new THREE.Group();
+        const body = new THREE.Mesh(
+            new THREE.BoxGeometry(0.8, 1.17, 0.05),
+            new THREE.MeshStandardMaterial({ map: robotBodyTexture })
+        );
+        const head = new THREE.Mesh(
+            new THREE.BoxGeometry(0.35, 0.35, 0.05),
+            new THREE.MeshStandardMaterial({ map: robotHeadTexture })
+        );
+        head.position.y = 0.76;
+        newObj.add(body);
+        newObj.add(head);
+    } else {
+        let mat;
+        if (currentTool === 'box') mat = boxMat.clone();
+        else if (currentTool === 'wall') mat = wallMat.clone();
+        else if (currentTool === 'spawn') mat = spawnMat.clone();
+        
+        // Since ghost might be a Group (though currently only target is), handle geometry cloning
+        const geo = ghostObject.geometry ? ghostObject.geometry.clone() : ghostObject.children[0].geometry.clone();
+        newObj = new THREE.Mesh(geo, mat);
+    }
     
-    const newObj = new THREE.Mesh(ghostObject.geometry.clone(), mat);
     newObj.position.copy(ghostObject.position);
     newObj.rotation.copy(ghostObject.rotation);
     
@@ -159,11 +194,19 @@ export function getSerializedData() {
                 rotY: obj.rotation.y
             });
         } else if (!obj.userData.isSpawn) {
+            // Get size from AABB or geometry
+            const size = new THREE.Vector3();
+            if (obj.geometry) {
+                size.set(obj.geometry.parameters.width, obj.geometry.parameters.height, obj.geometry.parameters.depth);
+            } else {
+                new THREE.Box3().setFromObject(obj).getSize(size);
+            }
+            
             data.blocks.push({
-                size: [obj.geometry.parameters.width, obj.geometry.parameters.height, obj.geometry.parameters.depth],
+                size: [size.x, size.y, size.z],
                 pos: [obj.position.x, obj.position.y, obj.position.z],
                 rot: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
-                color: obj.material.color.getHex()
+                color: obj.material ? obj.material.color.getHex() : 0x666666
             });
         }
     });

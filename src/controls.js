@@ -75,7 +75,7 @@ export function setupControls() {
                 if (gameStatus.isTesting) {
                     stopTesting();
                 } else {
-                    readyScreen.style.display = 'flex';
+                    if (readyScreen) readyScreen.style.display = 'flex';
                 }
             }
         }
@@ -156,10 +156,12 @@ function onKeyDown(event) {
     }
 
     if (event.code === keyBinds.reload) startReload();
-    event.preventDefault();
-
+    
     for (const [action, key] of Object.entries(keyBinds)) {
-        if (event.code === key) inputState[action] = true;
+        if (event.code === key) {
+            inputState[action] = true;
+            event.preventDefault();
+        }
     }
 }
 
