@@ -162,23 +162,36 @@ export function loadCustomLevel(code) {
 }
 
 // Initializing event listeners
-document.addEventListener('DOMContentLoaded', () => {
+export function initUIEventListeners() {
     const customBtn = document.getElementById('custom-game-btn');
-    if (customBtn) customBtn.addEventListener('click', showCustomMenu);
+    if (customBtn) customBtn.onclick = showCustomMenu;
     
     const backBtn = document.getElementById('custom-back-btn');
-    if (backBtn) backBtn.addEventListener('click', showMainMenu);
+    if (backBtn) backBtn.onclick = showMainMenu;
     
     const editorBtn = document.getElementById('launch-editor-btn');
-    if (editorBtn) editorBtn.addEventListener('click', () => {
-        hideAllMenus();
-        document.getElementById('editor-hud').style.display = 'block';
-        setEditorActive(true);
-    });
+    if (editorBtn) {
+        editorBtn.onclick = () => {
+            hideAllMenus();
+            const hud = document.getElementById('editor-hud');
+            if (hud) hud.style.display = 'block';
+            setEditorActive(true);
+        };
+    }
     
     const importBtn = document.getElementById('import-code-btn');
-    if (importBtn) importBtn.addEventListener('click', () => {
-        const code = prompt("Paste level code:");
-        if (code) loadCustomLevel(code);
-    });
-});
+    if (importBtn) {
+        importBtn.onclick = () => {
+            const code = prompt("Paste level code:");
+            if (code) loadCustomLevel(code);
+        };
+    }
+
+    const dailyBtn = document.getElementById('daily-game-btn');
+    if (dailyBtn) {
+        dailyBtn.onclick = () => {
+            gameStatus.customLevel = null;
+            showReadyScreen();
+        };
+    }
+}

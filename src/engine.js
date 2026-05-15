@@ -8,7 +8,7 @@ import { setupControls, updateCameraRotation } from './controls.js';
 import { setupWeapon, updateWeapon } from './weapon.js';
 import { setupUI, updateHUD } from './ui.js';
 import { initSFX } from './sfx.js';
-import { showMainMenu } from './gameLogic.js';
+import { showMainMenu, initUIEventListeners } from './gameLogic.js';
 import { updateEditor } from './editor.js';
 import { updateEditorControls } from './editorControls.js';
 
@@ -49,6 +49,7 @@ export async function initEngine() {
         setupControls();
         setupUI();
         setupWeapon(camera);
+        initUIEventListeners();
 
         // Put all targets into the scene now so their shaders get compiled below
         setupTargets();
