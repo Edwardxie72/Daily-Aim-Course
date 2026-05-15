@@ -3,18 +3,6 @@ import { THREE } from './state.js';
 export const collidableBoxes = [];
 export const levelMeshes = [];
 
-export function setupLevel(scene) {
-    collidableBoxes.length = 0; 
-    levelMeshes.length = 0; 
-    
-    function addStaticObject(mesh) {
-        scene.add(mesh);
-        mesh.updateMatrixWorld();
-        const box = new THREE.Box3().setFromObject(mesh);
-        collidableBoxes.push(box);
-        levelMeshes.push(mesh);
-    }
-
 const DEFAULT_LAYOUT = [
     // Enclosing Outer Walls
     { size: [1, 10, 70], pos: [-10, 5, -25], color: 0x333333 }, // Left Wall
