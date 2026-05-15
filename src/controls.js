@@ -96,7 +96,23 @@ export function setupControls() {
 
     document.addEventListener('mousedown', (e) => {
         if (isListeningForKey) return;
-        if (document.pointerLockElement === document.body) {
+        if (document.pointerLockElement !== document.body) {
+            // Don't request pointer lock if clicking a button
+            if (e.target.tagName === 'BUTTON') return;
+
+            const readyScreen = document.getElementById('ready-screen');
+            const pauseMenu = document.getElementById('pause-menu');
+            const resultsOverlay = document.getElementById('results-overlay');
+            
+            // Allow lock if ready or paused, but NOT if showing results
+            const canLock = (readyScreen && readyScreen.style.display !== 'none') || 
+                           (pauseMenu && pauseMenu.style.display !== 'none');
+            const isResults = resultsOverlay && resultsOverlay.style.display !== 'none';
+
+            if (canLock && !isResults) {
+                document.body.requestPointerLock();
+            }
+        } else {
             if (e.button === 0 && keyBinds.shoot === 'Mouse0') inputState.shoot = true;
         }
     });
