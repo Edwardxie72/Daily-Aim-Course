@@ -3,6 +3,7 @@ import { camera, inputState, gameStatus, keyBinds, settings, cameraAngle, applyC
 import { setupWeapon, startReload } from './weapon.js';
 import { shootTarget, toggleEasterEgg } from './targets.js';
 import { startGame, pauseGame, showReadyScreen, showMainMenu, resetLevel } from './gameLogic.js';
+import { stopTesting } from './editor.js';
 
 export function loadSettings() {
     const savedSens = localStorage.getItem('aimCourse_sens');
@@ -20,53 +21,14 @@ export function loadSettings() {
     }
 }
 
-export function setKeyBind(action, code) {
-    if (keyBinds[action] !== undefined) {
-        for (const [key, val] of Object.entries(keyBinds)) {
-            if (val === code && key !== action) keyBinds[key] = 'Unset';
-        }
-        keyBinds[action] = code;
-        localStorage.setItem('aimCourse_keyBinds', JSON.stringify(keyBinds));
-    }
-}
-
-export function getSens() { return settings.sensitivity; }
-export function setSens(val) { 
-    settings.sensitivity = val; 
-    localStorage.setItem('aimCourse_sens', val.toString());
-}
-
-
-export let isListeningForKey = false;
-export function setIsListeningForKey(val) { isListeningForKey = val; }
-
-export function resetRotation() {
-    cameraAngle.pitch = 0;
-    cameraAngle.yaw = 0;
-    applyCameraRotation();
+export function saveSettings() {
+    localStorage.setItem('aimCourse_sens', settings.sensitivity);
+    localStorage.setItem('aimCourse_volume', settings.volume);
+    localStorage.setItem('aimCourse_keyBinds', JSON.stringify(keyBinds));
 }
 
 export function setupControls() {
     const hud = document.getElementById('hud');
-    
-    setupWeapon(camera);
-
-
-
-
-    document.addEventListener('click', (e) => {
-        if (isListeningForKey) return;
-        // Only request pointer lock from the ready screen
-        const readyScreen = document.getElementById('ready-screen');
-        if (readyScreen.style.display === 'none') return;
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
-        
-        if (!document.pointerLockElement) {
-            document.body.requestPointerLock({ unadjustedMovement: true }).catch(() => {
-                document.body.requestPointerLock();
-            });
-        }
-    });
 
     document.addEventListener('pointerlockchange', () => {
         const leaderboardPanel = document.getElementById('leaderboard-panel');
@@ -89,7 +51,6 @@ export function setupControls() {
             document.removeEventListener('mousemove', onMouseMove);
             for (const key in inputState) inputState[key] = false;
 
-            // If the game just finished, results overlay handles the screen — don't show pause
             if (resultsOverlay && resultsOverlay.style.display !== 'none') return;
 
             if (gameStatus.running) {
@@ -99,7 +60,6 @@ export function setupControls() {
             } else {
                 hud.style.display = 'none';
                 if (gameStatus.isTesting) {
-                    const { stopTesting } = await import('./editor.js');
                     stopTesting();
                 } else {
                     readyScreen.style.display = 'flex';
@@ -109,12 +69,11 @@ export function setupControls() {
     });
 
     // ESC from ready screen → go to main menu (or editor if testing)
-    document.addEventListener('keydown', async (e) => {
+    document.addEventListener('keydown', (e) => {
         if (e.code === 'Escape' && !document.pointerLockElement) {
             const readyScreen = document.getElementById('ready-screen');
             if (readyScreen && readyScreen.style.display !== 'none') {
                 if (gameStatus.isTesting) {
-                    const { stopTesting } = await import('./editor.js');
                     stopTesting();
                 } else {
                     showMainMenu();
@@ -124,7 +83,6 @@ export function setupControls() {
     });
 
     document.addEventListener('mousedown', (e) => {
-        if (isListeningForKey) return;
         if (document.pointerLockElement === document.body) {
             if (e.button === 0 && keyBinds.shoot === 'Mouse0') inputState.shoot = true;
         }
@@ -150,8 +108,10 @@ export function updateCameraRotation() {
 
 function onMouseMove(event) {
     if (document.pointerLockElement !== document.body) return;
+
     const movementX = event.movementX || 0;
     const movementY = event.movementY || 0;
+
     if (Math.abs(movementX) > 2000 || Math.abs(movementY) > 2000) return;
 
     const CSGO_YAW = 0.022;
@@ -167,18 +127,6 @@ function onKeyDown(event) {
     
     if (event.code === keyBinds.reset) {
         event.preventDefault();
-        
-        if (gameStatus.isTesting) {
-            // Return to editor
-            const { stopTesting } = await import('./gameLogic.js'); // Use dynamic import to avoid circular dependency
-            // Wait, gameLogic.js is already imported but stopTesting might not be.
-            // Actually, I should just call a logic function.
-            // Let's use a simpler way: just exit pointer lock and let the state change handle it.
-            // But resetLevel() was called.
-            
-            // Re-importing might be messy. I'll just check the flag and handle it in pointerlockchange.
-        }
-        
         resetLevel();
         document.exitPointerLock();
         return;
@@ -188,7 +136,7 @@ function onKeyDown(event) {
         if (document.exitPointerLock) document.exitPointerLock();
         return;
     }
-    // Easter egg toggle — not in keybinds
+    
     if (event.code === 'Digit0') {
         toggleEasterEgg();
         return;
