@@ -310,6 +310,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 export function getSerializedData() {
+    const round = (n) => Math.round(n * 1000) / 1000;
     const data = {
         spawn: { x: 0, y: 0, z: 0, yaw: 0 },
         blocks: [],
@@ -322,17 +323,17 @@ export function getSerializedData() {
 
         if (obj.userData.isTarget) {
             data.targets.push({
-                x: obj.position.x, 
-                y: obj.position.y, 
-                z: obj.position.z,
-                rotY: obj.rotation.y
+                x: round(obj.position.x), 
+                y: round(obj.position.y), 
+                z: round(obj.position.z),
+                rotY: round(obj.rotation.y)
             });
         } else if (obj.userData.isSpawn) {
             data.spawn = {
-                x: obj.position.x,
-                y: obj.position.y,
-                z: obj.position.z,
-                yaw: obj.rotation.y
+                x: round(obj.position.x),
+                y: round(obj.position.y),
+                z: round(obj.position.z),
+                yaw: round(obj.rotation.y)
             };
         } else if (obj.userData.type) {
             // It's a block or wall
@@ -345,9 +346,9 @@ export function getSerializedData() {
             
             data.blocks.push({
                 type: obj.userData.type,
-                size: [size.x, size.y, size.z],
-                pos: [obj.position.x, obj.position.y, obj.position.z],
-                rot: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
+                size: [round(size.x), round(size.y), round(size.z)],
+                pos: [round(obj.position.x), round(obj.position.y), round(obj.position.z)],
+                rot: [round(obj.rotation.x), round(obj.rotation.y), round(obj.rotation.z)],
                 color: obj.material ? obj.material.color.getHex() : 0x666666
             });
         }
@@ -356,8 +357,123 @@ export function getSerializedData() {
     return data;
 }
 
-export function exportLevel() {
-    return btoa(JSON.stringify(getSerializedData()));
+export async function exportLevel() {
+    const jsonStr = JSON.stringify(getSerializedData());
+    const blob = new Blob([jsonStr]);
+    const compressedStream = blob.stream().pipeThrough(new CompressionStream('deflate'));
+    const buffer = await new Response(compressedStream).arrayBuffer();
+    
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return 'C_' + btoa(binary);
+}
+
+export async function decompressLevelCode(code) {
+    if (code.startsWith('C_')) {
+        const binaryStr = atob(code.substring(2));
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+        }
+        const decompressedStream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'));
+        return await new Response(decompressedStream).text();
+    } else {
+        return atob(code);
+    }
+}
+
+export function loadLevelIntoEditor(data) {
+    editorObjects.forEach(obj => editorGroup.remove(obj));
+    editorObjects.length = 0;
+    playerSpawn = { x: 0, y: 0, z: 0, yaw: 0 };
+    
+    if (data.blocks) {
+        data.blocks.forEach(b => {
+            let mesh;
+            if (b.type === 'door') {
+                const mat = new THREE.MeshStandardMaterial({ color: b.color || 0x333333 });
+                mesh = createDoorMesh(mat);
+            } else {
+                const mat = new THREE.MeshStandardMaterial({ color: b.color });
+                const geo = new THREE.BoxGeometry(b.size[0], b.size[1], b.size[2]);
+                mesh = new THREE.Mesh(geo, mat);
+            }
+            mesh.position.set(b.pos[0], b.pos[1], b.pos[2]);
+            if (b.rot) {
+                mesh.rotation.set(b.rot[0], b.rot[1], b.rot[2]);
+            }
+            mesh.userData.type = b.type;
+            editorGroup.add(mesh);
+            editorObjects.push(mesh);
+        });
+    }
+    
+    if (data.targets) {
+        data.targets.forEach(t => {
+            const newObj = new THREE.Group();
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(0.8, 1.17, 0.05),
+                new THREE.MeshStandardMaterial({ map: robotBodyTexture })
+            );
+            body.position.y = 0.585;
+            const head = new THREE.Mesh(
+                new THREE.BoxGeometry(0.35, 0.35, 0.05),
+                new THREE.MeshStandardMaterial({ map: robotHeadTexture })
+            );
+            head.position.y = 1.37;
+            newObj.add(body);
+            newObj.add(head);
+
+            const arrow = new THREE.Mesh(
+                new THREE.ConeGeometry(0.2, 0.5, 8),
+                new THREE.MeshStandardMaterial({ color: 0xffff00 })
+            );
+            arrow.rotation.x = Math.PI / 2;
+            arrow.position.z = 0.1;
+            arrow.position.y = 0.5;
+            arrow.userData.isHelper = true;
+            newObj.add(arrow);
+
+            newObj.position.set(t.x, t.y, t.z);
+            newObj.rotation.y = t.rotY || 0;
+            newObj.userData.isTarget = true;
+            
+            editorGroup.add(newObj);
+            editorObjects.push(newObj);
+        });
+    }
+    
+    if (data.spawn) {
+        const newObj = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 2, 0.6), spawnMat.clone());
+        body.position.y = 1.0;
+        newObj.add(body);
+
+        const arrow = new THREE.Mesh(
+            new THREE.ConeGeometry(0.2, 0.5, 8),
+            new THREE.MeshStandardMaterial({ color: 0xffff00 })
+        );
+        arrow.rotation.x = -Math.PI / 2;
+        arrow.position.z = -0.5;
+        arrow.position.y = 0.5;
+        arrow.userData.isHelper = true;
+        newObj.add(arrow);
+
+        newObj.position.set(data.spawn.x, data.spawn.y, data.spawn.z);
+        newObj.rotation.y = data.spawn.yaw || 0;
+        newObj.userData.isSpawn = true;
+        
+        editorGroup.add(newObj);
+        editorObjects.push(newObj);
+        
+        playerSpawn = data.spawn;
+    }
+    
+    validateLevel();
 }
 
 export function stopTesting() {
@@ -429,8 +545,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const exportBtn = document.getElementById('editor-export');
     if (exportBtn) {
-        exportBtn.onclick = () => {
-            const code = exportLevel();
+        exportBtn.onclick = async () => {
+            exportBtn.disabled = true;
+            exportBtn.innerText = "Exporting...";
+            const code = await exportLevel();
             const input = document.createElement('textarea');
             input.value = code;
             document.body.appendChild(input);
@@ -438,9 +556,27 @@ document.addEventListener('DOMContentLoaded', () => {
             document.execCommand('copy');
             document.body.removeChild(input);
             alert("Level code copied to clipboard!");
+            exportBtn.innerText = "💾 Export";
+            exportBtn.disabled = false;
         };
     }
     
+    const importBtn = document.getElementById('editor-import');
+    if (importBtn) {
+        importBtn.onclick = async () => {
+            const code = prompt("Paste level code:");
+            if (code) {
+                try {
+                    const jsonStr = await decompressLevelCode(code);
+                    const data = JSON.parse(jsonStr);
+                    loadLevelIntoEditor(data);
+                } catch (e) {
+                    console.error("Failed to import:", e);
+                    alert("Invalid or corrupt level code!");
+                }
+            }
+        };
+    }
 
     const exitBtn = document.getElementById('editor-exit');
     if (exitBtn) {

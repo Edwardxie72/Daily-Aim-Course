@@ -4,7 +4,7 @@ import { resetAmmo } from './weapon.js';
 import { fetchLeaderboard, updateLeaderboardUI } from './leaderboard.js';
 import { setupPlayer } from './player.js';
 import { setupLevel, setLevelVisibility } from './level.js';
-import { setEditorActive, getSerializedData, stopTesting } from './editor.js';
+import { setEditorActive, getSerializedData, stopTesting, decompressLevelCode } from './editor.js';
 
 function setLeaderboard(visible) {
     const el = document.getElementById('leaderboard-panel');
@@ -165,14 +165,15 @@ export function decrementTargets() {
     }
 }
 
-export function loadCustomLevel(code) {
+export async function loadCustomLevel(code) {
     try {
-        const json = atob(code);
+        const json = await decompressLevelCode(code);
         const data = JSON.parse(json);
         gameStatus.customLevel = data;
         gameStatus.isTesting = false;
         showReadyScreen();
     } catch (e) {
+        console.error("Failed to load custom level:", e);
         alert("Invalid level code!");
     }
 }
